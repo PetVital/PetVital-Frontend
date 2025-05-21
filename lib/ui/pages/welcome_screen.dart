@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'authentication/login_screen.dart';
+import 'authentication/register_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -7,6 +9,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFFFFFFF),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -33,7 +36,7 @@ class WelcomeScreen extends StatelessWidget {
                 '¡Bienvenido a\nPetVital!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 30,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -45,7 +48,7 @@ class WelcomeScreen extends StatelessWidget {
                 'La aplicación que cuida la\nsalud y bienestar de tus\nmascotas',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 19,
                   color: Colors.grey,
                 ),
               ),
@@ -55,17 +58,38 @@ class WelcomeScreen extends StatelessWidget {
               // Botón de iniciar sesión
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8C52FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF8C52FF), Color(0xFF00A3FF)], // Degradado púrpura a azul
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent, // Para que el botón no sobreescriba el gradiente
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    child: const Text(
+                      'Iniciar sesión',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.white, // Texto en blanco para contraste
+                      ),
                     ),
                   ),
-                  child: const Text('Iniciar sesión'),
                 ),
               ),
 
@@ -75,16 +99,26 @@ class WelcomeScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                    );
+                  },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.blue,
                     side: const BorderSide(color: Colors.blue),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  child: const Text('Crear cuenta'),
+                  child: const Text(
+                    'Crear cuenta',
+                    style: TextStyle(
+                      fontSize: 20,
+                    ),
+                  ),
                 ),
               ),
 
@@ -95,7 +129,7 @@ class WelcomeScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 text: TextSpan(
                   text: 'Al continuar, aceptas nuestros\n',
-                  style: const TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey,fontSize: 15 ),
                   children: [
                     TextSpan(
                       text: 'Términos de servicio',
