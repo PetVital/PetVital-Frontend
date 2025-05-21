@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ui/pages/welcome_screen.dart';
+import 'core/routes/app_routes.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,7 +22,8 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const WelcomeScreen(),
+      initialRoute: AppRoutes.welcome,  // Cambiado a la ruta de bienvenida
+      routes: AppRoutes.routes,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'register_screen.dart';
+import '../../../core/routes/app_routes.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -156,6 +157,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: ElevatedButton(
                     onPressed: () {
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        AppRoutes.main,
+                            (route) => false, // Esto elimina todas las rutas anteriores
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent, // Para que el botón no sobreescriba el gradiente
