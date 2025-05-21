@@ -1,10 +1,10 @@
 // lib/core/routes/app_routes.dart
 import 'package:flutter/material.dart';
 import '../../ui/pages/main/main_page.dart';
-import '../../ui/pages/home/home_page.dart';
-import '../../ui/pages/appointments/appointments_page.dart';
-import '../../ui/pages/chat/chat_page.dart';
-import '../../ui/pages/pets/pets_page.dart';
+import '../../ui/pages/home/home_screen.dart';
+import '../../ui/pages/appointments/appointments_screen.dart';
+import '../../ui/pages/chat/chat_screen.dart';
+import '../../ui/pages/pets/pets_screen.dart';
 import '../../ui/pages/welcome_screen.dart';
 import '../../ui/pages/authentication/login_screen.dart';
 import '../../ui/pages/authentication/register_screen.dart';
@@ -29,9 +29,9 @@ class AppRoutes {
 
     // Rutas de la aplicación principal
     main: (_) => const MainPage(),
-    home: (_) => const HomePage(),
-    appointments: (_) => const AppointmentsPage(),
-    chat: (_) => const ChatPage(),
-    pets: (_) => const PetsPage(),
+    home: (_) => const HomeScreen(),
+    appointments: (_) => const AppointmentsScreen(),
+    chat: (_) => const ChatScreen(),
+    pets: (_) => const PetsScreen(),
   };
 }

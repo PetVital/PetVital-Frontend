@@ -1,8 +1,8 @@
-// lib/ui/pages/appointments/appointments_page.dart
+// lib/ui/pages/appointments/appointments_screen.dart
 import 'package:flutter/material.dart';
 
-class AppointmentsPage extends StatelessWidget {
-  const AppointmentsPage({Key? key}) : super(key: key);
+class AppointmentsScreen extends StatelessWidget {
+  const AppointmentsScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

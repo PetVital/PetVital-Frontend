@@ -1,9 +1,9 @@
 // lib/ui/pages/main/main_page.dart
 import 'package:flutter/material.dart';
-import '../home/home_page.dart';
-import '../appointments/appointments_page.dart';
-import '../chat/chat_page.dart';
-import '../pets/pets_page.dart';
+import '../home/home_screen.dart';
+import '../appointments/appointments_screen.dart';
+import '../chat/chat_screen.dart';
+import '../pets/pets_screen.dart';
 import 'widgets/bottom_navigation_widget.dart';
 
 class MainPage extends StatefulWidget {
@@ -17,10 +17,10 @@ class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const HomePage(),
-    const AppointmentsPage(),
-    const ChatPage(),
-    const PetsPage(),
+    const HomeScreen(),
+    const AppointmentsScreen(),
+    const ChatScreen(),
+    const PetsScreen(),
   ];
 
   void _onTabTapped(int index) {

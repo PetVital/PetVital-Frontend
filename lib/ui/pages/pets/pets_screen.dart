@@ -1,8 +1,8 @@
-// lib/ui/pages/pets/pets_page.dart
+// lib/ui/pages/pets/pets_screen.dart
 import 'package:flutter/material.dart';
 
-class PetsPage extends StatelessWidget {
-  const PetsPage({Key? key}) : super(key: key);
+class PetsScreen extends StatelessWidget {
+  const PetsScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
