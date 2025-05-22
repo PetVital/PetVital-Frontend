@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _notificationsOn = true;
 
   @override
   Widget build(BuildContext context) {
@@ -90,16 +97,23 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               // Icono de notificaciones
-              Container(
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.notifications_active,
-                  color: Colors.white,
-                  size: 24,
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _notificationsOn = !_notificationsOn;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _notificationsOn ? Icons.notifications_active : Icons.notifications_off,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ),
             ],

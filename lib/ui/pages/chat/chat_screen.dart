@@ -134,12 +134,9 @@ class _ChatScreenState extends State<ChatScreen> {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 1,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () => Navigator.pop(context),
-      ),
       title: Row(
         children: [
+          const SizedBox(width: 5),
           Container(
             width: 40,
             height: 40,
@@ -166,7 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   'PetVital Asistente',
                   style: TextStyle(
                     color: Colors.black,
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

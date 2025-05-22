@@ -64,48 +64,56 @@ class BottomNavigationWidget extends StatelessWidget {
     required String label,
     required bool isActive,
   }) {
-    return GestureDetector(
-      onTap: () => onTap(index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Contenedor del ícono
-            Container(
-              width: isActive ? 43 : 37,
-              height: isActive ? 43 : 37,
-              decoration: isActive
-                  ? BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF8C52FF), Color(0xFF00A3FF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onTap(index),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        borderRadius: BorderRadius.circular(50),
+        child: Container(
+          width: 70, // Ancho fijo para mayor área de toque
+          height: 85, // Altura suficiente para incluir ícono + espacio + texto
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Ícono
+              Container(
+                width: isActive ? 43 : 30,
+                height: isActive ? 43 : 30,
+                decoration: isActive
+                    ? BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8C52FF), Color(0xFF00A3FF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                )
+                    : null,
+                child: Icon(
+                  icon,
+                  size: 26,
+                  color: isActive ? Colors.white : Colors.grey[600],
                 ),
-                shape: BoxShape.circle,
-              )
-                  : null,
-              child: Icon(
-                icon,
-                size: 26,
-                color: isActive ? Colors.white : Colors.grey[600],
               ),
-            ),
-            isActive
-                ? const SizedBox(height: 3)
-                : const SizedBox(height: 0),
-            // Label
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                color: isActive ? const Color(0xFF8C52FF) : Colors.grey[600],
-                fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+              const SizedBox(height: 0),
+              // Label
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isActive ? const Color(0xFF8C52FF) : Colors.grey[600],
+                  fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+
 }
