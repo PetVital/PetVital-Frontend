@@ -153,6 +153,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.white,
+        child: const Icon(Icons.add),
+        onPressed: () {},
+      ),
     );
   }
 
