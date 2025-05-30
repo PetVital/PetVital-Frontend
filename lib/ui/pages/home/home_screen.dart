@@ -351,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getPetBreed(int index) {
-    final breeds = ['Golden Retriever', 'Gato Persa', 'Bulldog Francés'];
+    final breeds = ['Labrador', 'Persa', 'Bulldog Francés'];
     return breeds[index % breeds.length]+" - "+"3 años";
   }
 }

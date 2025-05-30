@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'register_screen.dart';
 import '../../../core/routes/app_routes.dart';
+import '../../../data/repositories/local_storage_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,6 +12,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final localStorageService = LocalStorageService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -19,6 +21,12 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -156,7 +164,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      try {
+                        await localStorageService.insertSamplePets();
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          AppRoutes.main,
+                              (route) => false, // Esto elimina todas las rutas anteriores
+                        );
+                      } catch (e) {
+                        _showError('Error al guardar la mascota: ${e.toString()}');
+                      }
                       Navigator.pushNamedAndRemoveUntil(
                         context,
                         AppRoutes.main,

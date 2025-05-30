@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../data/repositories/local_storage_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({Key? key}) : super(key: key);
@@ -10,44 +11,84 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final localStorageService = LocalStorageService();
   List<Map<String, dynamic>> messages = [];
-
-  // Simulación de datos JSON del backend
-  final List<Map<String, dynamic>> chatData = [
-    {
-      "id": 1,
-      "message": "¡Hola! Soy el asistente virtual de PetVital. ¿En qué puedo ayudarte hoy con el cuidado de tu mascota?",
-      "isBot": true,
-      "timestamp": "2024-01-15T10:00:00Z",
-      "avatar": "bot"
-    },
-    {
-      "id": 2,
-      "message": "Hola, mi perro no quiere comer desde ayer",
-      "isBot": false,
-      "timestamp": "2024-01-15T10:01:00Z",
-      "avatar": "user"
-    },
-    {
-      "id": 3,
-      "message": "Lamento escuchar eso. La pérdida de apetito puede deberse a varias razones. ¿Has notado otros síntomas en tu mascota?",
-      "isBot": true,
-      "timestamp": "2024-01-15T10:01:30Z",
-      "avatar": "bot"
-    }
-  ];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialMessages();
+    _loadInitialMessage();
   }
 
-  void _loadInitialMessages() {
+  Future<void> _loadInitialMessage() async {
     setState(() {
-      messages = List.from(chatData);
+      _isLoading = true;
     });
-    _scrollToBottom();
+
+    try {
+      final pets = await localStorageService.getAllPets();
+      final initialMessage = await _generateWelcomeMessage(pets);
+
+      setState(() {
+        messages = [initialMessage];
+        _isLoading = false;
+      });
+
+      _scrollToBottom();
+    } catch (e) {
+      // En caso de error, usar mensaje por defecto
+      final defaultMessage = {
+        "id": 1,
+        "message": "¡Hola! Soy el asistente virtual de PetVital. ¿En qué puedo ayudarte hoy con el cuidado de tu mascota?",
+        "isBot": true,
+        "timestamp": DateTime.now().toIso8601String()
+      };
+
+      setState(() {
+        messages = [defaultMessage];
+        _isLoading = false;
+      });
+
+      _scrollToBottom();
+    }
+  }
+
+  Future<Map<String, dynamic>> _generateWelcomeMessage(List<dynamic> pets) async {
+    String message;
+
+    if (pets.isEmpty) {
+      message = "¡Hola! Soy el asistente virtual de PetVital. ¿En qué puedo ayudarte hoy con el cuidado de tu mascota?";
+    } else {
+      final petCount = pets.length;
+
+      if (petCount == 1) {
+        final petName = pets[0].name;
+        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes una mascota llamada $petName. ¿Te gustaria hablar sobre alguna de ellas?";
+      } else if (petCount == 2) {
+        final pet1Name = pets[0].name;
+        final pet2Name = pets[1].name;
+        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes 2 mascotas: $pet1Name y $pet2Name. ¿Te gustaria hablar sobre alguna de ellas?";
+      } else if (petCount <= 4) {
+        final petNames = pets.map((pet) => pet.name).join(', ');
+        final lastCommaIndex = petNames.lastIndexOf(',');
+        final formattedNames = lastCommaIndex != -1
+            ? petNames.substring(0, lastCommaIndex) + ' y' + petNames.substring(lastCommaIndex + 1)
+            : petNames;
+        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes $petCount mascotas: $formattedNames. ¿Te gustaria hablar sobre alguna de ellas?";
+      } else {
+        // Para más de 4 mascotas, solo mencionar la cantidad
+        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes $petCount mascotas. ¡Qué maravilloso! ¿Te gustaria hablar sobre alguna de ellas?";
+      }
+    }
+
+    return {
+      "id": 1,
+      "message": "$message", // Agrega la hora al mensaje
+      "isBot": true,
+      "timestamp": DateTime.now().toIso8601String(),
+    };
+
   }
 
   void _sendMessage() {
@@ -90,8 +131,7 @@ class _ChatScreenState extends State<ChatScreen> {
         "id": messages.length + 1,
         "message": randomResponse,
         "isBot": true,
-        "timestamp": DateTime.now().toIso8601String(),
-        "avatar": "bot"
+        "timestamp": DateTime.now().toIso8601String()
       };
 
       setState(() {
@@ -122,9 +162,30 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: _buildMessagesList(),
+            child: _isLoading ? _buildLoadingIndicator() : _buildMessagesList(),
           ),
           _buildMessageInput(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8158B7)),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Preparando tu asistente...',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+          ),
         ],
       ),
     );
