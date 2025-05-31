@@ -35,6 +35,7 @@ dependencies:
   dropdown_button2: ^2.3.9
   sqflite: ^2.0.0+3
   path: ^1.8.0
+  get_it: ^8.0.3
 
 
   # The following adds the Cupertino Icons font to your application.

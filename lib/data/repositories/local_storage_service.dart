@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import '../../domain/entities/Pet.dart';
-import '../../domain/entities/Message.dart';
+import '../../domain/entities/pet.dart';
+import '../../domain/entities/message.dart';
 
 class LocalStorageService {
   static final LocalStorageService _instance = LocalStorageService._internal();

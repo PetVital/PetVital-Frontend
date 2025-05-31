@@ -1,8 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'ui/pages/welcome_screen.dart';
 import 'core/routes/app_routes.dart';
+import 'application/register_use_case.dart';
+import 'data/repositories/user_repositoy_impl.dart';
+import 'domain/repositories/user_repository.dart';
+import 'data/api/user_api.dart';
+
+final getIt = GetIt.instance;
 
 void main() {
+  // Data Layer - APIs
+  getIt.registerLazySingleton<UserApi>(() => UserApi());
+
+  // Data Layer - Repositories
+  getIt.registerLazySingleton<UserRepository>(() =>
+      UserRepositoryImpl(getIt<UserApi>())
+  );
+
+  // Domain Layer (use cases)
+  getIt.registerLazySingleton<RegisterUseCase>(() =>
+      RegisterUseCase(getIt<UserRepository>())
+  );
+
   runApp(const MyApp());
 }
 

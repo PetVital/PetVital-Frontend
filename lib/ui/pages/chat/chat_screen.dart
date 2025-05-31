@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/repositories/local_storage_service.dart';
-import '../../../domain/entities/Message.dart';
+import '../../../domain/entities/message.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({Key? key}) : super(key: key);

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'widgets/raza_selector.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import '../../data/repositories/local_storage_service.dart';
-import '../../domain/entities/Pet.dart';
+import '../../domain/entities/pet.dart';
 import '../../../core/routes/app_routes.dart';
 
 class PetFormScreen extends StatefulWidget {
