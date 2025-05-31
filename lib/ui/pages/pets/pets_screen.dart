@@ -67,14 +67,32 @@ class PetsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Mis Mascotas',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 25,
-            fontWeight: FontWeight.w600,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0), // Ajusta el margen horizontal
+          child: const Text(
+            'Mis Mascotas',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 25,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: IconButton(
+              icon: const Icon(Icons.logout, color: Colors.black),
+              onPressed: () {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/', // Ruta definida en la configuración de rutas
+                      (route) => false,
+                );
+              },
+            ),
+          )
+        ],
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
