@@ -12,13 +12,13 @@ class UserApi {
       Uri.parse('$baseUrl/login/'),
       body: {
         'email': email,
-        'password': password,
+        'contraseña': password,
       },
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(utf8.decode(response.bodyBytes));
-      return User.fromJson(data['user']);
+      return User.fromJson(data);
     } else {
       return null;
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:petvital/application/login_use_case.dart';
 import 'ui/pages/welcome_screen.dart';
 import 'core/routes/app_routes.dart';
 import 'application/register_use_case.dart';
@@ -21,6 +22,9 @@ void main() {
   // Domain Layer (use cases)
   getIt.registerLazySingleton<RegisterUseCase>(() =>
       RegisterUseCase(getIt<UserRepository>())
+  );
+  getIt.registerLazySingleton<LoginUseCase>(() =>
+      LoginUseCase(getIt<UserRepository>())
   );
 
   runApp(const MyApp());

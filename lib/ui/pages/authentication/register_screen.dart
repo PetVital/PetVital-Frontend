@@ -64,6 +64,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           );
         } else {
+          setState(() {
+            _isLoading=false;
+          });
           // Registro fallido → muestra error
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Registro fallido. Intenta nuevamente')),
