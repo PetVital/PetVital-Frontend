@@ -166,12 +166,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: () async {
                       try {
-                        await localStorageService.insertSamplePets();
+                        localStorageService.clearAllTables(); //limpiar mensajes
+                        localStorageService.insertSamplePets(); //crear ejemplos
                         Navigator.pushNamedAndRemoveUntil(
                           context,
                           AppRoutes.main,
                               (route) => false, // Esto elimina todas las rutas anteriores
                         );
+
                       } catch (e) {
                         _showError('Error al guardar la mascota: ${e.toString()}');
                       }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/repositories/local_storage_service.dart';
+import '../../../domain/entities/Message.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({Key? key}) : super(key: key);
@@ -12,49 +13,79 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final localStorageService = LocalStorageService();
-  List<Map<String, dynamic>> messages = [];
+  List<Message> messages = [];
   bool _isLoading = true;
+  int _messageIdCounter = 1;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialMessage();
+    _loadMessages();
   }
 
-  Future<void> _loadInitialMessage() async {
+  Future<void> _loadMessages() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final pets = await localStorageService.getAllPets();
-      final initialMessage = await _generateWelcomeMessage(pets);
+      // Intentar cargar mensajes existentes de la BD
+      final existingMessages = await localStorageService.getAllMessages();
 
-      setState(() {
-        messages = [initialMessage];
-        _isLoading = false;
-      });
+      if (existingMessages.isNotEmpty) {
+        // Si hay mensajes existentes, mostrarlos
+        setState(() {
+          messages = existingMessages;
+          _messageIdCounter = existingMessages.length + 1;
+          _isLoading = false;
+        });
+      } else {
+        // Si no hay mensajes, generar mensaje de bienvenida
+        await _generateAndStoreWelcomeMessage();
+      }
 
       _scrollToBottom();
     } catch (e) {
-      // En caso de error, usar mensaje por defecto
-      final defaultMessage = {
-        "id": 1,
-        "message": "¡Hola! Soy el asistente virtual de PetVital. ¿En qué puedo ayudarte hoy con el cuidado de tu mascota?",
-        "isBot": true,
-        "timestamp": DateTime.now().toIso8601String()
-      };
-
-      setState(() {
-        messages = [defaultMessage];
-        _isLoading = false;
-      });
-
-      _scrollToBottom();
+      print('Error al cargar mensajes: $e');
+      // En caso de error, generar mensaje de bienvenida por defecto
+      await _generateAndStoreWelcomeMessage();
     }
   }
 
-  Future<Map<String, dynamic>> _generateWelcomeMessage(List<dynamic> pets) async {
+  Future<void> _generateAndStoreWelcomeMessage() async {
+    try {
+      final pets = await localStorageService.getAllPets();
+      final welcomeMessage = await _generateWelcomeMessage(pets);
+
+      // Guardar el mensaje de bienvenida en la BD
+      await _storeMessage(welcomeMessage);
+
+      setState(() {
+        messages = [welcomeMessage];
+        _messageIdCounter = 2;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error al generar mensaje de bienvenida: $e');
+      // Crear mensaje por defecto si falla todo
+      final defaultMessage = Message(
+        id: 1,
+        message: "¡Hola! Soy el asistente virtual de PetVital. ¿En qué puedo ayudarte hoy con el cuidado de tu mascota?",
+        isBot: true,
+        timestamp: DateTime.now().toIso8601String(),
+      );
+
+      await _storeMessage(defaultMessage);
+
+      setState(() {
+        messages = [defaultMessage];
+        _messageIdCounter = 2;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<Message> _generateWelcomeMessage(List<dynamic> pets) async {
     String message;
 
     if (pets.isEmpty) {
@@ -64,47 +95,56 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (petCount == 1) {
         final petName = pets[0].name;
-        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes una mascota llamada $petName. ¿Te gustaria hablar sobre alguna de ellas?";
+        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes una mascota llamada $petName. ¿Te gustaría hablar sobre ella?";
       } else if (petCount == 2) {
         final pet1Name = pets[0].name;
         final pet2Name = pets[1].name;
-        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes 2 mascotas: $pet1Name y $pet2Name. ¿Te gustaria hablar sobre alguna de ellas?";
+        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes 2 mascotas: $pet1Name y $pet2Name. ¿Te gustaría hablar sobre alguna de ellas?";
       } else if (petCount <= 4) {
         final petNames = pets.map((pet) => pet.name).join(', ');
         final lastCommaIndex = petNames.lastIndexOf(',');
         final formattedNames = lastCommaIndex != -1
             ? petNames.substring(0, lastCommaIndex) + ' y' + petNames.substring(lastCommaIndex + 1)
             : petNames;
-        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes $petCount mascotas: $formattedNames. ¿Te gustaria hablar sobre alguna de ellas?";
+        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes $petCount mascotas: $formattedNames. ¿Te gustaría hablar sobre alguna de ellas?";
       } else {
         // Para más de 4 mascotas, solo mencionar la cantidad
-        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes $petCount mascotas. ¡Qué maravilloso! ¿Te gustaria hablar sobre alguna de ellas?";
+        message = "¡Hola! Soy el asistente virtual de PetVital. Veo que tienes $petCount mascotas. ¡Qué maravilloso! ¿Te gustaría hablar sobre alguna de ellas?";
       }
     }
 
-    return {
-      "id": 1,
-      "message": "$message", // Agrega la hora al mensaje
-      "isBot": true,
-      "timestamp": DateTime.now().toIso8601String(),
-    };
+    return Message(
+      id: 1,
+      message: message,
+      isBot: true,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+  }
 
+  Future<void> _storeMessage(Message message) async {
+    try {
+      await localStorageService.insertMessage(message);
+    } catch (e) {
+      print('Error al guardar mensaje: $e');
+    }
   }
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
 
-    final newMessage = {
-      "id": messages.length + 1,
-      "message": _messageController.text.trim(),
-      "isBot": false,
-      "timestamp": DateTime.now().toIso8601String(),
-      "avatar": "user"
-    };
+    final newMessage = Message(
+      id: _messageIdCounter++,
+      message: _messageController.text.trim(),
+      isBot: false,
+      timestamp: DateTime.now().toIso8601String(),
+    );
 
     setState(() {
       messages.add(newMessage);
     });
+
+    // Guardar mensaje del usuario en la BD
+    _storeMessage(newMessage);
 
     _messageController.clear();
     _scrollToBottom();
@@ -127,16 +167,19 @@ class _ChatScreenState extends State<ChatScreen> {
       DateTime.now().millisecond % botResponses.length
       ];
 
-      final botMessage = {
-        "id": messages.length + 1,
-        "message": randomResponse,
-        "isBot": true,
-        "timestamp": DateTime.now().toIso8601String()
-      };
+      final botMessage = Message(
+        id: _messageIdCounter++,
+        message: randomResponse,
+        isBot: true,
+        timestamp: DateTime.now().toIso8601String(),
+      );
 
       setState(() {
         messages.add(botMessage);
       });
+
+      // Guardar respuesta del bot en la BD
+      _storeMessage(botMessage);
 
       _scrollToBottom();
     });
@@ -255,8 +298,8 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessageBubble(Map<String, dynamic> message) {
-    final isBot = message['isBot'];
+  Widget _buildMessageBubble(Message message) {
+    final isBot = message.isBot;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -304,7 +347,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
               child: Text(
-                message['message'],
+                message.message,
                 style: TextStyle(
                   color: isBot ? Colors.white : const Color(0xFF2C3E50),
                   fontSize: 16,
