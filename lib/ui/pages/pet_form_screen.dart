@@ -6,7 +6,6 @@ import '../../domain/entities/pet.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../application/add_pet_use_case.dart';
 import '../../../main.dart';
-import '../../data/repositories/local_storage_service.dart';
 
 class PetFormScreen extends StatefulWidget {
   final bool isFirstTime;
@@ -126,7 +125,6 @@ class _PetFormScreenState extends State<PetFormScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        centerTitle: true,
         titleSpacing: 0,
         title: Text(
           widget.isFirstTime ? 'Agrega tu primera mascota' : 'Agrega una mascota',
@@ -139,11 +137,16 @@ class _PetFormScreenState extends State<PetFormScreen> {
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.black87),
           onPressed: () {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              AppRoutes.main,
-                  (route) => false, // Esto elimina todas las rutas anteriores
-            );
+            if(widget.isFirstTime){
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                AppRoutes.main,
+                    (route) => false, // Esto elimina todas las rutas anteriores
+              );
+            }else{
+              Navigator.pop(context);
+            }
+
           },
         ),
       ),

@@ -11,4 +11,9 @@ class PetRepositoryImpl implements PetRepository {
   Future<bool> addPet(Pet pet) async {
     return await petApi.addPet(pet);
   }
+
+  @override
+  Future<List<Pet>?> getUserPets() async{
+    return await petApi.getUserPets();
+  }
 }

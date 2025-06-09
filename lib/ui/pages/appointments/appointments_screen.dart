@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'appointment_form_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({Key? key}) : super(key: key);
@@ -152,7 +153,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,
         child: const Icon(Icons.add),
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AppointmentFormScreen(),
+            ),
+          );
+        },
       ),
     );
   }

@@ -30,12 +30,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_svg: ^2.1.0
   font_awesome_flutter: ^10.8.0
   dropdown_button2: ^2.3.9
   sqflite: ^2.0.0+3
   path: ^1.8.0
   get_it: ^8.0.3
+  flutter_time_picker_spinner: ^2.0.0
 
 
   # The following adds the Cupertino Icons font to your application.
