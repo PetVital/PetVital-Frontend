@@ -23,24 +23,24 @@ class Pet {
 
   factory Pet.fromJson(Map<String, dynamic> json) => Pet(
     id: json['mascota_id'],
-    name: json['nombre'],
+    name: json['nombres'],
     type: json['tipo'],
     breed: json['raza'],
-    gender: json['sexo'],
+    gender: json['genero'],
     age: json['edad'],
-    timeUnit: json['unidadTiempo'],
+    timeUnit: json['unidad_tiempo'],
     weight: (json['peso'] as num).toDouble(),
-    userId: json['usuario']['id'],
+    userId: json['usuario']['user_id'],
   );
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'nombre': name,
+    'mascota_id': id,
+    'nombres': name,
     'tipo': type,
     'raza': breed,
-    'sexo': gender,
+    'genero': gender,
     'edad': age,
-    'unidadTiempo': timeUnit,
+    'unidad_tiempo': timeUnit,
     'peso': weight,
     'usuario': userId,
   };

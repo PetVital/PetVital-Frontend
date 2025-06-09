@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../data/repositories/local_storage_service.dart';
+import '../../../application/get_home_data_use_case.dart';
+import '../../../domain/entities/homeResponse.dart';
+import '../../../domain/entities/user.dart';
+import '../../../main.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -9,6 +14,51 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _notificationsOn = true;
+  bool isLoading = true;
+  String? errorMessage;
+  HomeResponse? homeData;
+  User? currentUser;
+
+  final LocalStorageService _storageService = LocalStorageService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHomeData();
+  }
+
+  Future<void> _loadHomeData() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      // Obtener usuario actual
+      final user = await _storageService.getCurrentUser();
+
+      final getHomeDataUseCase = getIt<GetHomeDataUseCase>();
+      final HomeResponse? homeResponse = await getHomeDataUseCase.getHomeData();
+
+      if (homeResponse != null) {
+        setState(() {
+          currentUser = user;
+          homeData = homeResponse;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'Error al cargar los datos';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Error: $e';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,9 +127,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Hola María',
-                      style: TextStyle(
+                    Text(
+                      'Hola ${currentUser?.firstName ?? 'Usuario'}',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 30,
                         fontWeight: FontWeight.bold,
@@ -124,13 +174,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPetsCarousel() {
+    if (isLoading) {
+      return _buildPetsLoadingCarousel();
+    }
+
+    if (errorMessage != null) {
+      return _buildErrorWidget(errorMessage!);
+    }
+
+    if (homeData == null || homeData!.pets.isEmpty) {
+      return _buildNoPetsWidget();
+    }
+
     return SizedBox(
       height: 220,
       child: PageView.builder(
-        itemCount: 3, // Número de mascotas
+        itemCount: homeData!.pets.length,
         padEnds: false,
         controller: PageController(viewportFraction: 0.99),
         itemBuilder: (context, index) {
+          final pet = homeData!.pets[index];
           return Container(
             margin: const EdgeInsets.all(10),
             padding: const EdgeInsets.only(top: 20, bottom: 10, left: 10, right: 10),
@@ -149,12 +212,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
@@ -172,12 +235,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 26,
                           ),
                         ),
-                        Container(width: 17),
+                        Container(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _getPetName(index),
+                              pet.name,
                               style: const TextStyle(
                                 color: Colors.black87,
                                 fontSize: 25,
@@ -185,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             Text(
-                              _getPetBreed(index),
+                              '${pet.type} - ${pet.age} ${_formatTimeUnit(pet.timeUnit, pet.age)}',
                               style: TextStyle(
                                 color: Colors.black.withOpacity(0.5),
                                 fontSize: 15,
@@ -195,11 +258,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: Colors.black,
-                      size: 24,
-                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        color: Colors.black,
+                        size: 24,
+                      ),
+                    )
                   ],
                 ),
                 const SizedBox(height: 17),
@@ -219,13 +285,120 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _formatTimeUnit(String timeUnit, int age) {
+    if (age == 1) {
+      switch (timeUnit.toLowerCase()) {
+        case 'años':
+          return 'año';
+        case 'meses':
+          return 'mes';
+        case 'días':
+          return 'día';
+        default:
+          return timeUnit; // En caso de un valor inesperado
+      }
+    }
+    return timeUnit.toLowerCase();
+  }
+
+  Widget _buildPetsLoadingCarousel() {
+    return SizedBox(
+      height: 220,
+      child: Container(
+        margin: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8158B7)),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Cargando mascotas...',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoPetsWidget() {
+    return SizedBox(
+      height: 220,
+      child: Container(
+        margin: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.pets,
+                size: 48,
+                color: Colors.grey,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'No tienes mascotas registradas',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Agrega tu primera mascota',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInfoCard(IconData icon, String title, Color color) {
     return Container(
       width: 90,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8)
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8)
       ),
       child: Column(
         children: [
@@ -234,9 +407,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             title,
             style: TextStyle(
-              color: Colors.black.withOpacity(0.7),
-              fontSize: 14,
-              fontWeight: FontWeight.bold
+                color: Colors.black.withOpacity(0.7),
+                fontSize: 14,
+                fontWeight: FontWeight.bold
             ),
           ),
         ],
@@ -245,29 +418,177 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRemindersList() {
+    if (isLoading) {
+      return _buildRemindersLoadingList();
+    }
+
+    if (errorMessage != null) {
+      return _buildErrorWidget(errorMessage!);
+    }
+
+    if (homeData == null || homeData!.appointments.isEmpty) {
+      return _buildNoRemindersWidget();
+    }
+
     return Column(
-      children: [
-        _buildReminderCard(
-          title: 'Vacuna antirrábica',
-          time: 'Mañana · 10:00 AM',
-          color: const Color(0xFF8158B7),
-          icon: Icons.medical_services,
+      children: homeData!.appointments.map((appointment) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildReminderCard(
+            title: appointment.name,
+            time: '${appointment.date} · ${appointment.time}',
+            color: _getColorForReminderType(appointment.type),
+            icon: _getIconForReminderType(appointment.type),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRemindersLoadingList() {
+    return Column(
+      children: List.generate(3, (index) =>
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Cargando citas...',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Por favor espera',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ),
+    );
+  }
+
+  Widget _buildNoRemindersWidget() {
+    return Container(
+      padding: const EdgeInsets.all(24.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.calendar_today,
+              size: 48,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No tienes citas programadas',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Agenda tu primera cita',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        _buildReminderCard(
-          title: 'Baño y peluquería',
-          time: 'Viernes · 15:00 PM',
-          color: const Color(0xFF35B4DD),
-          icon: Icons.shower,
-        ),
-        const SizedBox(height: 12),
-        _buildReminderCard(
-          title: 'Control veterinario',
-          time: 'Lunes · 09:30 AM',
-          color: const Color(0xFF40D1B6),
-          icon: Icons.local_hospital,
-        ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(String error) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: Colors.red[600],
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              error,
+              style: TextStyle(
+                color: Colors.red[600],
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -344,14 +665,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Métodos auxiliares para datos de ejemplo
-  String _getPetName(int index) {
-    final names = ['Max', 'Luna', 'Rocky'];
-    return names[index % names.length];
+  Color _getColorForReminderType(String type) {
+    switch (type.toLowerCase()) {
+      case 'vacuna':
+        return const Color(0xFF8158B7);
+      case 'baño':
+      case 'peluquería':
+        return const Color(0xFF35B4DD);
+      case 'control':
+      case 'consulta':
+        return const Color(0xFF40D1B6);
+      default:
+        return const Color(0xFF8158B7);
+    }
   }
 
-  String _getPetBreed(int index) {
-    final breeds = ['Labrador', 'Persa', 'Bulldog Francés'];
-    return breeds[index % breeds.length]+" - "+"3 años";
+  IconData _getIconForReminderType(String type) {
+    switch (type.toLowerCase()) {
+      case 'vacuna':
+        return Icons.medical_services;
+      case 'baño':
+      case 'peluquería':
+        return Icons.shower;
+      case 'control':
+      case 'consulta':
+        return Icons.local_hospital;
+      default:
+        return Icons.event;
+    }
   }
 }

@@ -1,5 +1,6 @@
 // lib/ui/pages/pets/pets_screen.dart
 import 'package:flutter/material.dart';
+import '../pet_form_screen.dart';
 
 class PetsScreen extends StatelessWidget {
   const PetsScreen({Key? key}) : super(key: key);
@@ -424,7 +425,13 @@ class PetsScreen extends StatelessWidget {
         backgroundColor: Colors.blue[600],
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () {
-          // Agregar nueva mascota
+          //sino tiene mascotas lleva al formulario
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PetFormScreen(isFirstTime: false),
+            ),
+          );
         },
       ),
     );

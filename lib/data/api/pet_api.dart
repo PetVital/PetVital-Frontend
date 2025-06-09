@@ -14,6 +14,7 @@ class PetApi {
       'genero': pet.gender,
       'edad': pet.age.toString(),
       'peso': pet.weight.toString(),
+      'unidad_tiempo': pet.timeUnit.toString(),
       'usuario': pet.userId
     };
 
