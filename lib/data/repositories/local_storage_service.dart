@@ -25,7 +25,7 @@ class LocalStorageService {
     String path = await getDatabasesPath();
     String dbPath = join(path, 'pet_vital.db');
 
-    //await deleteDatabase(dbPath); // <- elimina base de datos anterior
+    await deleteDatabase(dbPath); // <- elimina base de datos anterior
 
     return await openDatabase(
       join(path, 'pet_vital.db'),
@@ -51,7 +51,8 @@ class LocalStorageService {
             gender TEXT,
             age INTEGER,
             timeUnit TEXT,
-            weight REAL
+            weight REAL,
+            userId INTEGER
           )
         ''');
 
@@ -168,53 +169,6 @@ class LocalStorageService {
     final db = await database;
     await db.insert('Pets', pet.toDbJson(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
-
-  Future<void> insertSamplePets() async {
-    final db = await database;
-
-    final List<Pet> samplePets = [
-      Pet(
-        id: 1,
-        name: 'Max',
-        type: 'Perro',
-        breed: 'Labrador',
-        gender: 'Macho',
-        age: 3,
-        timeUnit: 'años',
-        weight: 25.5,
-      ),
-      Pet(
-        id: 2,
-        name: 'Luna',
-        type: 'Gato',
-        breed: 'Persa',
-        gender: 'Hembra',
-        age: 2,
-        timeUnit: 'años',
-        weight: 4.2,
-      ),
-      Pet(
-        id: 3,
-        name: 'Rocky',
-        type: 'Perro',
-        breed: 'Bulldog Frances',
-        gender: 'Macho',
-        age: 3,
-        timeUnit: 'año',
-        weight: 1.8,
-      ),
-    ];
-
-    for (final pet in samplePets) {
-      await db.insert(
-        'Pets',
-        pet.toDbJson(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-    print("inserte");
-  }
-
 
   // Actualiza una mascota
   Future<void> updatePet(Pet pet) async {

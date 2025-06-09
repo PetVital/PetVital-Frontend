@@ -6,6 +6,7 @@ import '../../domain/entities/pet.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../application/add_pet_use_case.dart';
 import '../../../main.dart';
+import '../../data/repositories/local_storage_service.dart';
 
 class PetFormScreen extends StatefulWidget {
   final bool isFirstTime;
@@ -62,6 +63,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
       return;
     }
 
+    final userId = await localStorageService.getCurrentUserId();
+
     final pet = Pet(
       id: 0, // no se usa en la creación
       name: _nameController.text.trim(),
@@ -71,6 +74,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
       age: int.parse(_ageController.text.trim()),
       timeUnit: _selectedTime!,
       weight: double.parse(_weightController.text.trim()),
+      userId: userId
     );
 
     try {

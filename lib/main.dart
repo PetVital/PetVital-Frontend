@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:petvital/application/add_pet_use_case.dart';
+import 'package:petvital/application/get_home_data_use_case.dart';
 import 'package:petvital/application/login_use_case.dart';
 import 'ui/pages/welcome_screen.dart';
 import 'core/routes/app_routes.dart';
 import 'application/register_use_case.dart';
 import 'application/login_use_case.dart';
+//repository impl
 import 'data/repositories/user_repositoy_impl.dart';
 import 'data/repositories/pet_repository_impl.dart';
+import 'data/repositories/home_repository_impl.dart';
+//repository
 import 'domain/repositories/user_repository.dart';
 import 'domain/repositories/pet_repository.dart';
+import 'domain/repositories/home_repository.dart';
+//api
 import 'data/api/user_api.dart';
 import 'data/api/pet_api.dart';
+import 'data/api/home_api.dart';
 
 final getIt = GetIt.instance;
 
@@ -19,6 +26,7 @@ void main() {
   // Data Layer - APIs
   getIt.registerLazySingleton<UserApi>(() => UserApi());
   getIt.registerLazySingleton<PetApi>(() => PetApi());
+  getIt.registerLazySingleton<HomeApi>(() => HomeApi());
 
   // Data Layer - Repositories
   getIt.registerLazySingleton<UserRepository>(() =>
@@ -26,6 +34,9 @@ void main() {
   );
   getIt.registerLazySingleton<PetRepository>(() =>
       PetRepositoryImpl(getIt<PetApi>())
+  );
+  getIt.registerLazySingleton<HomeRepository>(() =>
+      HomeRepositoryImpl(getIt<HomeApi>())
   );
 
   // Domain Layer (use cases)
@@ -37,6 +48,9 @@ void main() {
   );
   getIt.registerLazySingleton<AddPetUseCase>(() =>
       AddPetUseCase(getIt<PetRepository>())
+  );
+  getIt.registerLazySingleton<GetHomeDataUseCase>(() =>
+      GetHomeDataUseCase(getIt<HomeRepository>())
   );
 
   runApp(const MyApp());

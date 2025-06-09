@@ -7,6 +7,7 @@ class Pet {
   final int age;
   final String timeUnit;
   final double weight;
+  final int userId;
 
   Pet({
     required this.id,
@@ -17,10 +18,11 @@ class Pet {
     required this.age,
     required this.timeUnit,
     required this.weight,
+    required this.userId,
   });
 
   factory Pet.fromJson(Map<String, dynamic> json) => Pet(
-    id: json['id'],
+    id: json['mascota_id'],
     name: json['nombre'],
     type: json['tipo'],
     breed: json['raza'],
@@ -28,6 +30,7 @@ class Pet {
     age: json['edad'],
     timeUnit: json['unidadTiempo'],
     weight: (json['peso'] as num).toDouble(),
+    userId: json['usuario']['id'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -39,6 +42,7 @@ class Pet {
     'edad': age,
     'unidadTiempo': timeUnit,
     'peso': weight,
+    'usuario': userId,
   };
 
   // Para convertir desde la base de datos
@@ -51,6 +55,7 @@ class Pet {
     age: json['age'],
     timeUnit: json['timeUnit'],
     weight: (json['weight'] as num).toDouble(),
+    userId: json['userId'],
   );
 
 // Para guardar en la base de datos
@@ -63,6 +68,7 @@ class Pet {
     'age': age,
     'timeUnit': timeUnit,
     'weight': weight,
+    'userId': userId,
   };
 
 }

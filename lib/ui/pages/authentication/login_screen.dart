@@ -54,10 +54,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (loginResponse!=null) {
 
-          // Por ahora, simulamos un login exitoso
-          localStorageService.clearAllTables(); // limpiar mensajes
-          localStorageService.insertSamplePets(); // crear ejemplos
-
           setState(() {
             _isLoading=false;
           });
