@@ -4,6 +4,8 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import '../../data/repositories/local_storage_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../../core/routes/app_routes.dart';
+import '../../../application/add_pet_use_case.dart';
+import '../../../main.dart';
 
 class PetFormScreen extends StatefulWidget {
   final bool isFirstTime;
@@ -23,6 +25,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   final _weightController = TextEditingController();
+  bool _isLoading = false;
 
   String _selectedPetType = 'Perro';
   String? _selectedBreed;
@@ -46,7 +49,6 @@ class _PetFormScreenState extends State<PetFormScreen> {
     // Validar formulario y dropdowns
     bool isFormValid = _formKey.currentState!.validate();
 
-    // Validar dropdowns manualmente
     setState(() {
       _breedError = _selectedBreed == null ? 'Selecciona una raza' : null;
       _sexError = _selectedSex == null ? 'Selecciona el sexo' : null;
@@ -61,30 +63,50 @@ class _PetFormScreenState extends State<PetFormScreen> {
     }
 
     final pet = Pet(
-      id: 0,
+      id: 0, // no se usa en la creación
       name: _nameController.text.trim(),
       type: _selectedPetType,
-      breed: _selectedBreed ?? 'Desconocido',
-      gender: _selectedSex ?? 'No especificado',
+      breed: _selectedBreed!,
+      gender: _selectedSex!,
       age: int.parse(_ageController.text.trim()),
-      timeUnit: _selectedTime ?? 'años',
+      timeUnit: _selectedTime!,
       weight: double.parse(_weightController.text.trim()),
     );
 
-
     try {
-      await localStorageService.insertSamplePets();
+      setState(() {
+        _isLoading = true;
+      });
 
-      await localStorageService.insertPet(pet);
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.main,
-            (route) => false, // Esto elimina todas las rutas anteriores
-      );
+      final addPetUseCase = getIt<AddPetUseCase>();
+      final success = await addPetUseCase.addPet(pet);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (success) {
+        if (widget.isFirstTime) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.main,
+                (route) => false,
+          );
+        } else {
+          Navigator.pop(context);
+        }
+      } else {
+        _showError('No se pudo registrar la mascota. Intenta nuevamente.');
+      }
+
     } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
       _showError('Error al guardar la mascota: ${e.toString()}');
     }
   }
+
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(

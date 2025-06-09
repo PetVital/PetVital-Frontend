@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../main.dart';
 import 'login_screen.dart';
-import '../pet_form_screen.dart';
 import '../../../application/register_use_case.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -56,11 +55,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           setState(() {
             _isLoading=false;
           });
-          // Registro exitoso → redirige a la siguiente pantalla
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registro exitoso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const PetFormScreen(isFirstTime: true),
+              builder: (context) => const LoginScreen(),
             ),
           );
         } else {

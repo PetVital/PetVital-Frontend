@@ -1,15 +1,20 @@
-import '../domain/entities/user.dart';
+import '../domain/entities/loginResponse.dart';
 import '../domain/repositories/user_repository.dart';
+import '../data/repositories/local_storage_service.dart';
 
 class LoginUseCase {
   final UserRepository userRepository;
+  final LocalStorageService _storageService = LocalStorageService();
 
   LoginUseCase(this.userRepository);
 
-  Future<User?> login(String email, String password) async {
+  Future<LoginResponse?> login(String email, String password) async {
     try {
-      final User? user = await userRepository.login(email, password);
-      return user; // Devuelve el objeto User
+      final LoginResponse? loginResponse = await userRepository.login(email, password);
+
+      await _storageService.saveUser(loginResponse!.user);
+
+      return loginResponse; // Devuelve el objeto User
     } catch (e) {
       return null; // Devuelve null en caso de error
     }

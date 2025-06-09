@@ -1,4 +1,4 @@
-import '../../domain/entities/user.dart';
+import '../../domain/entities/loginResponse.dart';
 import '../../domain/repositories/user_repository.dart';
 import '../api/user_api.dart';
 
@@ -8,7 +8,7 @@ class UserRepositoryImpl implements UserRepository {
   UserRepositoryImpl(this.userApi);
 
   @override
-  Future<User?> login(String email, String password) async {
+  Future<LoginResponse?> login(String email, String password) async {
     return await userApi.login(email, password);
   }
 

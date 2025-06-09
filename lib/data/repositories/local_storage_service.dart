@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../domain/entities/pet.dart';
+import '../../domain/entities/user.dart';
 import '../../domain/entities/message.dart';
 
 class LocalStorageService {
@@ -22,13 +23,24 @@ class LocalStorageService {
 
   Future<Database> initDB() async {
     String path = await getDatabasesPath();
-    print("Database path: $path");
+    String dbPath = join(path, 'pet_vital.db');
+
+    //await deleteDatabase(dbPath); // <- elimina base de datos anterior
 
     return await openDatabase(
       join(path, 'pet_vital.db'),
       version: 1,
       onCreate: (db, version) async {
         print("Creating database tables...");
+
+        await db.execute(''' 
+          CREATE TABLE IF NOT EXISTS User(
+            id TEXT PRIMARY KEY, 
+            first_name TEXT,
+            last_name TEXT,
+            email TEXT
+          )
+        ''');
 
         await db.execute(''' 
           CREATE TABLE IF NOT EXISTS Pets (
@@ -66,6 +78,64 @@ class LocalStorageService {
     final path = join(await getDatabasesPath(), 'pet_vital.db');
     await deleteDatabase(path);
     print("");
+  }
+
+  Future saveUser(User user) async {
+    final db = await database;
+
+    // Limpiar la tabla antes de insertar un nuevo usuario
+    await db.delete('User');
+
+    // Insertar el nuevo usuario
+    await db.insert(
+      'User',
+      {
+        'id': user.id,
+        'first_name': user.firstName,
+        'last_name': user.lastName,
+        'email': user.email,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace, // Reemplaza el registro si ya existe
+    );
+  }
+
+  Future<User?> getCurrentUser() async {
+    final db = await database;
+    var results = await db.query('User', limit: 1);
+
+    if (results.isNotEmpty) {
+      return User(
+        id: results.first['id'] as String,
+        firstName: results.first['first_name'] as String,
+        lastName: results.first['last_name'] as String,
+        email: results.first['email'] as String,
+      );
+    }
+    return null;
+  }
+
+  Future<int> getCurrentUserId() async {
+    final db = await database;
+    var results = await db.query('User', limit: 1);
+
+    if (results.isNotEmpty) {
+      var userId = results.first['id'];
+      if (userId is int) {
+        return userId;
+      } else if (userId is String) {
+        int parsedUserId = int.tryParse(userId) ?? 0;
+        return parsedUserId;
+      } else {
+        return 0;
+      }
+    } else {
+      return 0;
+    }
+  }
+
+  Future<void> clearUser() async {
+    final db = await database;
+    await db.delete('User');
   }
 
   Future<void> clearAllTables() async {

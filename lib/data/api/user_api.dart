@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../domain/entities/user.dart';
+import '../../domain/entities/loginResponse.dart';
 import '../repositories/local_storage_service.dart';
 import 'common/api_constants.dart';
 
 class UserApi {
   final String baseUrl = ApiConstants.baseUrl;
 
-  Future<User?> login(String email, String password) async {
+  Future<LoginResponse?> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/login/'),
       body: {
@@ -18,7 +19,7 @@ class UserApi {
 
     if (response.statusCode == 200) {
       final data = json.decode(utf8.decode(response.bodyBytes));
-      return User.fromJson(data);
+      return LoginResponse.fromJson(data);
     } else {
       return null;
     }

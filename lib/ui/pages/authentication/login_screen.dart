@@ -5,6 +5,7 @@ import 'register_screen.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../data/repositories/local_storage_service.dart';
 import '../../../application/login_use_case.dart';
+import '../pet_form_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,14 +47,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final loginUseCase = getIt<LoginUseCase>();
 
-        final user = await loginUseCase.login(
+        final loginResponse = await loginUseCase.login(
           _emailController.text,
           _passwordController.text
         );
 
-        if (user!=null) {
-          // Simulamos una llamada a la API
-          await Future.delayed(const Duration(seconds: 2));
+        if (loginResponse!=null) {
 
           // Por ahora, simulamos un login exitoso
           localStorageService.clearAllTables(); // limpiar mensajes
@@ -63,12 +62,23 @@ class _LoginScreenState extends State<LoginScreen> {
             _isLoading=false;
           });
 
-          // Registro exitoso → redirige a la siguiente pantalla
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            AppRoutes.main,
-                (route) => false, // Esto elimina todas las rutas anteriores
-          );
+          if(loginResponse.hasPets){
+            //si tiene mascotas lleva al home
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.main,
+                  (route) => false, // Esto elimina todas las rutas anteriores
+            );
+          }else{
+            //sino tiene mascotas lleva al formulario
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PetFormScreen(isFirstTime: true),
+              ),
+            );
+          }
+
         } else {
           setState(() {
             _isLoading=false;
