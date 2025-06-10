@@ -19,6 +19,7 @@ class UserApi {
 
     if (response.statusCode == 200) {
       final data = json.decode(utf8.decode(response.bodyBytes));
+      print(data);
       return LoginResponse.fromJson(data);
     } else {
       return null;

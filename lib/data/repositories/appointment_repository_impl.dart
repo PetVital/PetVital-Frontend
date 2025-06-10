@@ -13,8 +13,8 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   }
 
   @override
-  Future<List<Appointment>?> getUserAppointments({int? petId}) async {
-    return await appointmentApi.getUserAppointments(petId: petId); // ← Llamada nombrada
+  Future<List<Appointment>?> getUserAppointments() async {
+    return await appointmentApi.getUserAppointments(); // ← Llamada nombrada
   }
 
 }

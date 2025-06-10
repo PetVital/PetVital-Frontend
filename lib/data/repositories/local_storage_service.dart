@@ -153,6 +153,11 @@ class LocalStorageService {
     print("Todas las tablas han sido vaciadas.");
   }
 
+  Future<void> clearPets() async {
+    final db = await database;
+    await db.delete('Pets');
+  }
+
   // Reemplaza todos los registros existentes por una nueva lista de mascotas
   Future<void> replacePets(List<Pet> pets) async {
     final db = await database;
@@ -181,6 +186,24 @@ class LocalStorageService {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  // Obtiene una mascota por su ID
+  Future<Pet?> getPetById(int id) async {
+    final db = await database;
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'Pets',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isNotEmpty) {
+      return Pet.fromDb(maps.first);
+    } else {
+      return null;
+    }
+  }
+
 
   // Elimina una mascota por su ID
   Future<void> deletePet(int id) async {

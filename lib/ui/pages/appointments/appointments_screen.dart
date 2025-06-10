@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'appointment_form_screen.dart';
+import '../../../domain/entities/appointment.dart';
+import '../../../domain/entities/pet.dart';
+import '../../../application/get_user_appointmets_use_case.dart';
+import '../../../application/get_user_pets_use_case.dart';
+import '../../../main.dart';
+// Importar el transformador que creamos
+import '../../../domain/entities/appointmentTransformer.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({Key? key}) : super(key: key);
@@ -9,59 +16,60 @@ class AppointmentsScreen extends StatefulWidget {
 }
 
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
-  DateTime currentMonth = DateTime(2023, 6); // Junio 2023 como en la imagen
+  DateTime currentMonth = DateTime.now();
+  //TODO: mostrar proximas citas solo si la fecha es mayor o igual a hoy y la hora tambien
 
-  // Datos de ejemplo de citas en formato JSON más común
-  final List<Map<String, dynamic>> appointmentsData = [
-    {
-      'id': 1,
-      'title': 'Revisión general',
-      'time': '10:30 AM',
-      'clinic': 'Clínica Veterinaria San Miguel',
-      'date': {
-        'day': 15,
-        'month': 6,
-        'year': 2023,
-      },
-      'icon': 'medical_services',
-      'color': '#8158B7',
-      'petName': 'Max',
-    },
-    {
-      'id': 2,
-      'title': 'Vacunación anual',
-      'time': '2:00 PM',
-      'clinic': 'Clínica Veterinaria San Miguel',
-      'date': {
-        'day': 21,
-        'month': 6,
-        'year': 2023,
-      },
-      'icon': 'vaccines',
-      'color': '#8158B7',
-      'petName': 'Luna',
-    },
-    {
-      'id': 3,
-      'title': 'Control de peso',
-      'time': '11:00 AM',
-      'clinic': 'Clínica Veterinaria San Miguel',
-      'date': {
-        'day': 28,
-        'month': 6,
-        'year': 2023,
-      },
-      'icon': 'monitor_weight',
-      'color': '#35B4DD',
-      'petName': 'Rocky',
-    },
-  ];
+  // Datos reales
+  List<Appointment> _appointments = [];
+  List<Map<String, dynamic>> _appointmentsUIData = [];
 
-  // Métodos auxiliares para trabajar con los datos JSON
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Cargar solo las citas (ya no necesitamos las mascotas por separado)
+      final appointmentsUseCase = getIt<GetUserAppointmentsUseCase>();
+      final appointments = await appointmentsUseCase.getUserAppointments();
+
+      // Transformar a formato UI usando el transformer asíncrono
+      final uiData = await AppointmentTransformer.appointmentsToUIFormat(appointments!);
+
+      setState(() {
+        _appointments = appointments;
+        _appointmentsUIData = uiData;
+        _isLoading = false;
+      });
+
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error al cargar las citas: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Método para refrescar datos
+  Future<void> _refreshData() async {
+    await _loadData();
+  }
+
+  // Métodos auxiliares (mantener los existentes)
   Map<int, List<Map<String, dynamic>>> getAppointmentsForMonth(DateTime month) {
     Map<int, List<Map<String, dynamic>>> monthAppointments = {};
 
-    for (var appointment in appointmentsData) {
+    for (var appointment in _appointmentsUIData) {
       final appointmentDate = appointment['date'];
       if (appointmentDate['month'] == month.month &&
           appointmentDate['year'] == month.year) {
@@ -85,6 +93,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         return Icons.vaccines;
       case 'monitor_weight':
         return Icons.monitor_weight;
+      case 'bathtub':
+        return Icons.bathtub;
       case 'pets':
         return Icons.pets;
       default:
@@ -95,6 +105,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Color getColorFromHex(String hexColor) {
     return Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,8 +121,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.grey),
+            onPressed: _refreshData,
+          ),
+        ],
       ),
-      body: Column(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+          ? _buildErrorWidget()
+          : Column(
         children: [
           // Calendario
           Container(
@@ -153,309 +174,340 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,
         child: const Icon(Icons.add),
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const AppointmentFormScreen(),
             ),
           );
+
+          // Si se guardó una cita exitosamente, recargar datos
+          if (result == true) {
+            _refreshData();
+          }
         },
       ),
     );
   }
 
-Widget _buildCalendarHeader() {
-  final monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-
-  return Padding(
-    padding: const EdgeInsets.all(16.0),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.grey),
-          onPressed: () {
-            setState(() {
-              currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
-            });
-          },
-        ),
-        Text(
-          '${monthNames[currentMonth.month - 1]} ${currentMonth.year}',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF2C3E50),
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.grey[400],
           ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right, color: Colors.grey),
-          onPressed: () {
-            setState(() {
-              currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
-            });
-          },
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildCalendarGrid() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-    child: Column(
-      children: [
-        // Encabezados de días
-        Row(
-          children: ['L', 'M', 'M', 'J', 'V', 'S', 'D']
-              .map((day) => Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                day,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ))
-              .toList(),
-        ),
-        // Grid de días
-        ..._buildCalendarWeeks(),
-        const SizedBox(height: 16),
-      ],
-    ),
-  );
-}
-
-List<Widget> _buildCalendarWeeks() {
-  final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
-  final lastDayOfMonth = DateTime(currentMonth.year, currentMonth.month + 1, 0);
-  final firstDayWeekday = firstDayOfMonth.weekday;
-
-  List<Widget> weeks = [];
-  List<Widget> currentWeek = [];
-
-  // Días del mes anterior
-  final previousMonth = DateTime(currentMonth.year, currentMonth.month - 1, 0);
-  for (int i = firstDayWeekday - 1; i > 0; i--) {
-    currentWeek.add(_buildCalendarDay(
-      previousMonth.day - i + 1,
-      isCurrentMonth: false,
-    ));
-  }
-
-  // Días del mes actual
-  for (int day = 1; day <= lastDayOfMonth.day; day++) {
-    if (currentWeek.length == 7) {
-      weeks.add(Row(children: currentWeek));
-      currentWeek = [];
-    }
-
-    currentWeek.add(_buildCalendarDay(day, isCurrentMonth: true));
-  }
-
-  // Días del próximo mes
-  while (currentWeek.length < 7) {
-    currentWeek.add(_buildCalendarDay(
-      currentWeek.length - (7 - firstDayWeekday) + 1,
-      isCurrentMonth: false,
-    ));
-  }
-
-  if (currentWeek.isNotEmpty) {
-    weeks.add(Row(children: currentWeek));
-  }
-
-  return weeks;
-}
-
-Widget _buildCalendarDay(int day, {required bool isCurrentMonth}) {
-  final currentMonthAppointments = getAppointmentsForMonth(currentMonth);
-  final hasAppointment = isCurrentMonth && currentMonthAppointments.containsKey(day);
-  final isToday = isCurrentMonth &&
-      day == DateTime.now().day &&
-      currentMonth.month == DateTime.now().month &&
-      currentMonth.year == DateTime.now().year;
-
-  return Expanded(
-    child: Container(
-      height: 40,
-      margin: const EdgeInsets.all(2),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: isCurrentMonth ? () {} : null,
-          child: Container(
-            decoration: BoxDecoration(
-              color: hasAppointment
-                  ? const Color(0xFF8158B7)
-                  : isToday
-                  ? Colors.blue.withOpacity(0.1)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-              border: isToday && !hasAppointment
-                  ? Border.all(color: Colors.blue, width: 1)
-                  : null,
-            ),
-            child: Center(
-              child: Text(
-                day.toString(),
-                style: TextStyle(
-                  color: hasAppointment
-                      ? Colors.white
-                      : isCurrentMonth
-                      ? isToday
-                      ? Colors.blue
-                      : const Color(0xFF2C3E50)
-                      : Colors.grey[400],
-                  fontSize: 16,
-                  fontWeight: hasAppointment || isToday
-                      ? FontWeight.w600
-                      : FontWeight.normal,
-                ),
-              ),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage!,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
             ),
           ),
-        ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _refreshData,
+            child: const Text('Reintentar'),
+          ),
+        ],
       ),
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildAppointmentsList() {
-  final currentMonthAppointments = getAppointmentsForMonth(currentMonth);
-  List<Widget> appointmentWidgets = [];
+  Widget _buildCalendarHeader() {
+    final monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
 
-  // Convertir las citas del mes actual a widgets
-  currentMonthAppointments.forEach((day, dayAppointments) {
-    for (var appointment in dayAppointments) {
-      appointmentWidgets.add(_buildAppointmentCard(appointment: appointment));
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left, color: Colors.grey),
+            onPressed: () {
+              setState(() {
+                currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
+              });
+            },
+          ),
+          Text(
+            '${monthNames[currentMonth.month - 1]} ${currentMonth.year}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2C3E50),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right, color: Colors.grey),
+            onPressed: () {
+              setState(() {
+                currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          // Encabezados de días
+          Row(
+            children: ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+                .map((day) => Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  day,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ))
+                .toList(),
+          ),
+          // Grid de días
+          ..._buildCalendarWeeks(),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildCalendarWeeks() {
+    final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
+    final lastDayOfMonth = DateTime(currentMonth.year, currentMonth.month + 1, 0);
+    final firstDayWeekday = firstDayOfMonth.weekday;
+
+    List<Widget> weeks = [];
+    List<Widget> currentWeek = [];
+
+    // Días del mes anterior
+    final previousMonth = DateTime(currentMonth.year, currentMonth.month - 1, 0);
+    for (int i = firstDayWeekday - 1; i > 0; i--) {
+      currentWeek.add(_buildCalendarDay(
+        previousMonth.day - i + 1,
+        isCurrentMonth: false,
+      ));
     }
-  });
 
-  // Ordenar por día
-  appointmentWidgets.sort((a, b) {
-    // Esta es una ordenación básica, podrías mejorarla si necesitas más precisión
-    return 0;
-  });
+    // Días del mes actual
+    for (int day = 1; day <= lastDayOfMonth.day; day++) {
+      if (currentWeek.length == 7) {
+        weeks.add(Row(children: currentWeek));
+        currentWeek = [];
+      }
 
-  if (appointmentWidgets.isEmpty) {
-    return const Center(
-      child: Text(
-        'No tienes citas programadas este mes',
-        style: TextStyle(
-          color: Colors.grey,
-          fontSize: 16,
+      currentWeek.add(_buildCalendarDay(day, isCurrentMonth: true));
+    }
+
+    // Días del próximo mes
+    while (currentWeek.length < 7) {
+      currentWeek.add(_buildCalendarDay(
+        currentWeek.length - (7 - firstDayWeekday) + 1,
+        isCurrentMonth: false,
+      ));
+    }
+
+    if (currentWeek.isNotEmpty) {
+      weeks.add(Row(children: currentWeek));
+    }
+
+    return weeks;
+  }
+
+  Widget _buildCalendarDay(int day, {required bool isCurrentMonth}) {
+    final currentMonthAppointments = getAppointmentsForMonth(currentMonth);
+    final hasAppointment = isCurrentMonth && currentMonthAppointments.containsKey(day);
+    final isToday = isCurrentMonth &&
+        day == DateTime.now().day &&
+        currentMonth.month == DateTime.now().month &&
+        currentMonth.year == DateTime.now().year;
+
+    return Expanded(
+      child: Container(
+        height: 40,
+        margin: const EdgeInsets.all(2),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: isCurrentMonth ? () {} : null,
+            child: Container(
+              decoration: BoxDecoration(
+                color: hasAppointment
+                    ? const Color(0xFF8158B7)
+                    : isToday
+                    ? Colors.blue.withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                border: isToday && !hasAppointment
+                    ? Border.all(color: Colors.blue, width: 1)
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  day.toString(),
+                  style: TextStyle(
+                    color: hasAppointment
+                        ? Colors.white
+                        : isCurrentMonth
+                        ? isToday
+                        ? Colors.blue
+                        : const Color(0xFF2C3E50)
+                        : Colors.grey[400],
+                    fontSize: 16,
+                    fontWeight: hasAppointment || isToday
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  return ListView(
-    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-    children: appointmentWidgets,
-  );
-}
+  Widget _buildAppointmentsList() {
+    final currentMonthAppointments = getAppointmentsForMonth(currentMonth);
+    List<Map<String, dynamic>> allAppointments = [];
 
-Widget _buildAppointmentCard({
-  required Map<String, dynamic> appointment,
-}) {
-  final monthNames = [
-    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-  ];
+    // Recopilar todas las citas del mes
+    currentMonthAppointments.forEach((day, dayAppointments) {
+      allAppointments.addAll(dayAppointments);
+    });
 
-  final appointmentDate = appointment['date'];
-  final day = appointmentDate['day'];
-  final month = appointmentDate['month'];
-  final appointmentColor = getColorFromHex(appointment['color']);
-  final appointmentIcon = getIconFromString(appointment['icon']);
+    // Ordenar las citas por día y hora
+    allAppointments.sort((a, b) {
+      final dateA = a['date'];
+      final dateB = b['date'];
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.1),
-          spreadRadius: 1,
-          blurRadius: 4,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: appointmentColor.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            appointmentIcon,
-            color: appointmentColor,
-            size: 24,
+      // Primero ordenar por día
+      final dayComparison = dateA['day'].compareTo(dateB['day']);
+      if (dayComparison != 0) return dayComparison;
+
+      // Si es el mismo día, ordenar por hora
+      return a['time'].toString().compareTo(b['time'].toString());
+    });
+
+    if (allAppointments.isEmpty) {
+      return const Center(
+        child: Text(
+          'No tienes citas programadas este mes',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 16,
           ),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                appointment['title'],
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2C3E50),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '$day de ${monthNames[month - 1]} · ${appointment['time']}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                appointment['clinic'],
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-              if (appointment['petName'] != null) ...[
-                const SizedBox(height: 2),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      itemCount: allAppointments.length,
+      itemBuilder: (context, index) {
+        return _buildAppointmentCard(appointment: allAppointments[index]);
+      },
+    );
+  }
+
+  Widget _buildAppointmentCard({
+    required Map<String, dynamic> appointment,
+  }) {
+    final monthNames = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ];
+
+    final appointmentDate = appointment['date'];
+    final day = appointmentDate['day'];
+    final month = appointmentDate['month'];
+    final appointmentColor = getColorFromHex(appointment['color']);
+    final appointmentIcon = getIconFromString(appointment['icon']);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: appointmentColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              appointmentIcon,
+              color: appointmentColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  'Para: ${appointment['petName']}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: appointmentColor,
-                    fontWeight: FontWeight.w500,
+                  appointment['title'],
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2C3E50),
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  '$day de ${monthNames[month - 1]} · ${appointment['time']}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Para ${appointment['petName']}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                )
               ],
-            ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 }

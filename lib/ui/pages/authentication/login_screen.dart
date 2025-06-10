@@ -58,8 +58,9 @@ class _LoginScreenState extends State<LoginScreen> {
             _isLoading=false;
           });
 
-          if(loginResponse.hasPets){
+          if(loginResponse.pets.length>0){
             //si tiene mascotas lleva al home
+            await localStorageService.replacePets(loginResponse.pets);
             Navigator.pushNamedAndRemoveUntil(
               context,
               AppRoutes.main,
@@ -67,6 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }else{
             //sino tiene mascotas lleva al formulario
+            await localStorageService.clearPets();
             Navigator.push(
               context,
               MaterialPageRoute(

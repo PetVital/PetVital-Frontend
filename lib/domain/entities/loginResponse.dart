@@ -1,21 +1,42 @@
 import 'user.dart';
+import 'pet.dart';
 
 class LoginResponse {
   final String message;
   final User user;
-  final bool hasPets;
+  final List<Pet> pets;
 
   LoginResponse({
     required this.message,
     required this.user,
-    required this.hasPets,
+    required this.pets,
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    print('🔹 JSON completo recibido en LoginResponse: $json');
+
+    final message = json['message'] ?? '';
+    print('🔹 Mensaje: $message');
+
+    final userJson = json['user'];
+    print('🔹 User JSON: $userJson');
+
+    final petsJson = json['pets'] as List<dynamic>? ?? [];
+    print('🔹 Pets JSON: $petsJson');
+
+    final user = User.fromJson(userJson);
+    print('✅ Usuario creado: ${user.toJson()}');
+
+    final pets = petsJson.map((petJson) {
+      print('➡ Procesando pet: $petJson');
+      return Pet.fromJson(petJson);
+    }).toList();
+    print('✅ Lista de mascotas creada: ${pets.map((p) => p.toJson()).toList()}');
+
     return LoginResponse(
-      message: json['message'] ?? '',
-      user: User.fromJson(json['user']),
-      hasPets: json['hasPets'] ?? false,
+      message: message,
+      user: user,
+      pets: pets,
     );
   }
 
@@ -23,7 +44,7 @@ class LoginResponse {
     return {
       'message': message,
       'user': user.toJson(),
-      'hasPets': hasPets,
+      'pets': pets.map((pet) => pet.toJson()).toList(),
     };
   }
 }

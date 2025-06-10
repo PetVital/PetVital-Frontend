@@ -34,18 +34,17 @@ class AppointmentApi {
     }
   }
 
-  /// Listar citas por usuario (y opcionalmente por mascota)
-  Future<List<Appointment>?> getUserAppointments({int? petId}) async {
+  /// Listar citas solo por usuario
+  Future<List<Appointment>?> getUserAppointments() async {
     try {
       final userId = await localStorageService.getCurrentUserId();
       if (userId == null) return null;
 
-      final queryParams = {
-        'user_id': userId.toString(),
-        if (petId != null) 'mascota_id': petId.toString(),
-      };
-
-      final uri = Uri.parse('$baseUrl/citas/list/').replace(queryParameters: queryParams);
+      final uri = Uri.parse('$baseUrl/citas/list/').replace(
+        queryParameters: {
+          'user_id': userId.toString(),
+        },
+      );
 
       final response = await http.get(
         uri,
@@ -67,4 +66,5 @@ class AppointmentApi {
       return null;
     }
   }
+
 }

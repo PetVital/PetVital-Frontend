@@ -9,6 +9,7 @@ import 'application/login_use_case.dart';
 import 'application/register_use_case.dart';
 import 'application/get_user_pets_use_case.dart';
 import 'application/add_appointment_use_case.dart';
+import 'application/get_user_appointmets_use_case.dart';
 //repository impl
 import 'data/repositories/user_repositoy_impl.dart';
 import 'data/repositories/pet_repository_impl.dart';
@@ -66,6 +67,9 @@ void main() {
   );
   getIt.registerLazySingleton<AddAppointmentUseCase>(() =>
       AddAppointmentUseCase(getIt<AppointmentRepository>())
+  );
+  getIt.registerLazySingleton<GetUserAppointmentsUseCase>(() =>
+      GetUserAppointmentsUseCase(getIt<AppointmentRepository>())
   );
 
   runApp(const MyApp());
