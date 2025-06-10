@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/repositories/local_storage_service.dart';
+import '../../../core/utils/date_time_utils.dart';
 import '../../../application/get_home_data_use_case.dart';
 import '../../../domain/entities/homeResponse.dart';
 import '../../../domain/entities/user.dart';
@@ -436,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.only(bottom: 12),
           child: _buildReminderCard(
             title: appointment.name,
-            time: '${appointment.date} · ${appointment.time}',
+            time: DateTimeUtils.formatDateTime(appointment.date, appointment.time),
             color: _getColorForReminderType(appointment.type),
             icon: _getIconForReminderType(appointment.type),
           ),
