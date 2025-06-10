@@ -22,7 +22,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
   final _timeController = TextEditingController();
   final _notesController = TextEditingController();
 
-  String? _selectedAppointmentType;
+  String? _selectedAppointmentType = 'Vacuna';
   Pet? _selectedPet;
   List<Pet>? _pets;
   bool _isLoadingPets = false;
@@ -164,18 +164,93 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
     );
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      // Handle form submission
-      print('Tipo: $_selectedAppointmentType');
-      print('Título: ${_titleController.text.trim()}');
-      print('Mascota: ${_selectedPet?.name}');
-      print('Fecha: ${_dateController.text.trim()}');
-      print('Hora: ${_timeController.text.trim()}');
-      print('Notas: ${_notesController.text.trim()}');
+  String _convertTo24Hour(String time12h) {
+    final parts = time12h.split(' ');
+    final timePart = parts[0];
+    final period = parts[1];
 
-      // Navigate back or show success message
-      Navigator.pop(context);
+    final hourMinute = timePart.split(':');
+    int hour = int.parse(hourMinute[0]);
+    final minute = hourMinute[1];
+
+    if (period == 'PM' && hour != 12) {
+      hour += 12;
+    } else if (period == 'AM' && hour == 12) {
+      hour = 0;
+    }
+
+    return '${hour.toString().padLeft(2, '0')}:$minute:00';
+  }
+
+  void _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Convertir fecha de dd/mm/yyyy a yyyy-mm-dd
+        final dateParts = _dateController.text.trim().split('/');
+        final formattedDate = '${dateParts[2]}-${dateParts[1].padLeft(2, '0')}-${dateParts[0].padLeft(2, '0')}';
+
+        // Convertir hora de 12h a 24h format
+        final timeText = _timeController.text.trim();
+        final formattedTime = _convertTo24Hour(timeText);
+
+        // Construir el objeto Appointment
+        final appointment = Appointment(
+          id: 0, // El ID será asignado por el backend
+          type: _selectedAppointmentType!, // tipo_recordatorio
+          name: _titleController.text.trim(), // nombre
+          date: formattedDate, // fecha en formato yyyy-mm-dd
+          time: formattedTime, // hora en formato 24h
+          note: _notesController.text.trim().isEmpty ? '' : _notesController.text.trim(), // nota (puede estar vacía)
+          reminder: '', // recordatorio (por ahora vacío, puedes ajustar según necesites)
+          petId: _selectedPet!.id, // mascota.id
+        );
+
+        // Enviar al backend usando AddAppointmentUseCase
+        final addAppointmentUseCase = getIt<AddAppointmentUseCase>();
+        final success = await addAppointmentUseCase.addAppointment(appointment);
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (success) {
+          // Mostrar mensaje de éxito
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cita guardada exitosamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Navegar de vuelta
+          Navigator.pop(context, true); // Retornar true para indicar que se guardó exitosamente
+        } else {
+          // Mostrar mensaje de error
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error al guardar la cita. Inténtalo de nuevo.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Mostrar mensaje de error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        print('Error al guardar la cita: $e');
+      }
     }
   }
 
