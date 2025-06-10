@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../data/repositories/local_storage_service.dart';
 import '../../../domain/entities/message.dart';
+import '../../../main.dart';
+import '../../../application/send_message_use_case.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({Key? key}) : super(key: key);
@@ -15,6 +17,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final localStorageService = LocalStorageService();
   List<Message> messages = [];
   bool _isLoading = true;
+  bool _isbotTyping = false;
   int _messageIdCounter = 1;
 
   @override
@@ -129,60 +132,59 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _sendMessage() {
+  void _sendMessage() async{
     if (_messageController.text.trim().isEmpty) return;
 
     final newMessage = Message(
-      id: _messageIdCounter++,
+      id: _messageIdCounter+=2,
       message: _messageController.text.trim(),
       isBot: false,
       timestamp: DateTime.now().toIso8601String(),
     );
 
-    setState(() {
-      messages.add(newMessage);
-    });
-
-    // Guardar mensaje del usuario en la BD
-    _storeMessage(newMessage);
-
     _messageController.clear();
-    _scrollToBottom();
 
-    // Simular respuesta del bot después de un delay
-    _simulateBotResponse();
-  }
-
-  void _simulateBotResponse() {
-    Future.delayed(const Duration(seconds: 2), () {
-      final botResponses = [
-        "Entiendo tu preocupación. ¿Podrías decirme qué edad tiene tu mascota y si ha tenido cambios en su rutina recientemente?",
-        "Es importante observar el comportamiento de tu mascota. ¿Ha bebido agua normalmente?",
-        "Te recomiendo consultar con un veterinario si el problema persiste más de 24 horas.",
-        "¿Tu mascota muestra algún signo de malestar como vómitos o letargo?",
-        "Puedo ayudarte a encontrar una clínica veterinaria cerca de ti si necesitas atención urgente."
-      ];
-
-      final randomResponse = botResponses[
-      DateTime.now().millisecond % botResponses.length
-      ];
-
-      final botMessage = Message(
-        id: _messageIdCounter++,
-        message: randomResponse,
-        isBot: true,
-        timestamp: DateTime.now().toIso8601String(),
-      );
-
+    try {
       setState(() {
-        messages.add(botMessage);
+        _isbotTyping = true;
       });
 
-      // Guardar respuesta del bot en la BD
-      _storeMessage(botMessage);
+      final sendMessageUseCase = getIt<SendMessageUseCase>();
+      final messageResponse = await sendMessageUseCase.sendMessage(newMessage);
 
+      setState(() {
+        _isbotTyping = false;
+      });
+
+      if (messageResponse != null) {
+        _storeMessage(newMessage);
+        setState(() {
+          messages.add(newMessage);
+        });
+
+        _storeMessage(messageResponse);
+        setState(() {
+          messages.add(messageResponse);
+        });
+
+      } else {
+        _showError('No se pudo registrar la mascota. Intenta nuevamente.');
+      }
       _scrollToBottom();
-    });
+
+    } catch (e) {
+      setState(() {
+        _isbotTyping = false;
+      });
+      _showError('Error al guardar la mascota: ${e.toString()}');
+    }
+
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _scrollToBottom() {

@@ -5,6 +5,7 @@ import '../../data/repositories/local_storage_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../application/add_pet_use_case.dart';
+import '../../data/repositories/local_storage_service.dart';
 import '../../../main.dart';
 
 class PetFormScreen extends StatefulWidget {
@@ -82,13 +83,18 @@ class _PetFormScreenState extends State<PetFormScreen> {
       });
 
       final addPetUseCase = getIt<AddPetUseCase>();
-      final success = await addPetUseCase.addPet(pet);
+      final petResponse = await addPetUseCase.addPet(pet);
 
       setState(() {
         _isLoading = false;
       });
 
-      if (success) {
+      if (petResponse != null) {
+
+        await localStorageService.insertPet(petResponse);
+
+        _showSuccess("Mascota registrada exitosamente");
+
         if (widget.isFirstTime) {
           Navigator.pushNamedAndRemoveUntil(
             context,
@@ -116,6 +122,19 @@ class _PetFormScreenState extends State<PetFormScreen> {
       SnackBar(content: Text(message)),
     );
   }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: Colors.white), // Letras blancas
+        ),
+        backgroundColor: Colors.green, // Fondo verde
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {

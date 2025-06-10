@@ -1,6 +1,6 @@
 import '../entities/pet.dart';
 
 abstract class PetRepository {
-  Future<bool> addPet(Pet pet);
+  Future<Pet?> addPet(Pet pet);
   Future<List<Pet>?> getUserPets();
 }

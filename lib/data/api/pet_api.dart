@@ -7,7 +7,7 @@ import 'common/api_constants.dart';
 class PetApi {
   final String baseUrl = ApiConstants.baseUrl;
   final localStorageService = LocalStorageService();
-  Future<bool> addPet(Pet pet) async {
+  Future<Pet?> addPet(Pet pet) async {
 
     final body = {
       'nombres': pet.name,
@@ -21,14 +21,20 @@ class PetApi {
     };
 
     final response = await http.post(
-      Uri.parse('$baseUrl/mascotas/create/'), // Asegúrate de que coincida con tu ruta real
+      Uri.parse('$baseUrl/mascotas/create/'),
       headers: {
         'Content-Type': 'application/json',
       },
       body: jsonEncode(body),
     );
 
-    return response.statusCode == 200 || response.statusCode == 201;
+    if (response.statusCode == 201) {
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+      return Pet.fromJson(responseData['mascota']); // asegúrate que el backend devuelve esto
+    } else {
+      print('Error al crear la mascota: ${response.body}');
+      return null;
+    }
   }
 
   Future<List<Pet>?> getUserPets() async {

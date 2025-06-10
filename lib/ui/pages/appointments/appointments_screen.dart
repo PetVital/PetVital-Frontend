@@ -4,9 +4,11 @@ import '../../../domain/entities/appointment.dart';
 import '../../../domain/entities/pet.dart';
 import '../../../application/get_user_appointmets_use_case.dart';
 import '../../../application/get_user_pets_use_case.dart';
+import '../../../core/utils/appointment_filter.dart';
 import '../../../main.dart';
 // Importar el transformador que creamos
 import '../../../domain/entities/appointmentTransformer.dart';
+import 'package:intl/intl.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({Key? key}) : super(key: key);
@@ -39,20 +41,54 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     });
 
     try {
-      // Cargar solo las citas (ya no necesitamos las mascotas por separado)
       final appointmentsUseCase = getIt<GetUserAppointmentsUseCase>();
       final appointments = await appointmentsUseCase.getUserAppointments();
 
-      // Transformar a formato UI usando el transformer asíncrono
-      final uiData = await AppointmentTransformer.appointmentsToUIFormat(appointments!);
+      final now = DateTime.now();
+      final tomorrow = now.add(Duration(days: 1));
+
+      // Opción 1: Filtrar solo citas futuras (recomendado)
+      final filteredAppointments = AppointmentFilter.filterFutureAppointments(
+        appointments: appointments!,
+        fromDate: now,
+      );
+
+      // Opción 2: Si quieres un rango específico, usa esto en su lugar:
+      /*
+      final now = DateTime.now();
+      final oneYearLater = DateTime(now.year + 1, now.month, now.day);
+
+      final filteredAppointments = AppointmentFilter.filterByDateRange(
+        appointments: appointments!,
+        startDateTime: now,
+        endDateTime: oneYearLater,
+      );
+      */
+
+        // Opción 3: Si quieres filtrar por el mes actual:
+        /*
+      final now = DateTime.now();
+      final filteredAppointments = AppointmentFilter.filterByMonth(
+        appointments: appointments!,
+        year: now.year,
+        month: now.month,
+      );
+      */
+
+      print('Total appointments: ${appointments!.length}');
+      print('Filtered appointments: ${filteredAppointments.length}');
+
+      // Transformar para la UI
+      final uiData = await AppointmentTransformer.appointmentsToUIFormat(filteredAppointments);
 
       setState(() {
-        _appointments = appointments;
+        _appointments = filteredAppointments;
         _appointmentsUIData = uiData;
         _isLoading = false;
       });
 
     } catch (e) {
+      print('Error loading appointments: $e'); // Debug
       setState(() {
         _errorMessage = 'Error al cargar las citas: $e';
         _isLoading = false;

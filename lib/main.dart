@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:petvital/data/repositories/message_repository_impl.dart';
 import 'core/routes/app_routes.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 //use cases
@@ -10,21 +11,25 @@ import 'application/register_use_case.dart';
 import 'application/get_user_pets_use_case.dart';
 import 'application/add_appointment_use_case.dart';
 import 'application/get_user_appointmets_use_case.dart';
+import 'application/send_message_use_case.dart';
 //repository impl
 import 'data/repositories/user_repositoy_impl.dart';
 import 'data/repositories/pet_repository_impl.dart';
 import 'data/repositories/home_repository_impl.dart';
 import 'data/repositories/appointment_repository_impl.dart';
+import 'data/repositories/local_storage_service.dart';
 //repository
 import 'domain/repositories/user_repository.dart';
 import 'domain/repositories/pet_repository.dart';
 import 'domain/repositories/home_repository.dart';
 import 'domain/repositories/appointment_repository.dart';
+import 'domain/repositories/message_repository.dart';
 //api
 import 'data/api/user_api.dart';
 import 'data/api/pet_api.dart';
 import 'data/api/home_api.dart';
 import 'data/api/appointment_api.dart';
+import 'data/api/message_api.dart';
 
 final getIt = GetIt.instance;
 
@@ -34,6 +39,7 @@ void main() {
   getIt.registerLazySingleton<PetApi>(() => PetApi());
   getIt.registerLazySingleton<HomeApi>(() => HomeApi());
   getIt.registerLazySingleton<AppointmentApi>(() => AppointmentApi());
+  getIt.registerLazySingleton<MessageApi>(() => MessageApi());
 
   // Data Layer - Repositories
   getIt.registerLazySingleton<UserRepository>(() =>
@@ -47,6 +53,9 @@ void main() {
   );
   getIt.registerLazySingleton<AppointmentRepository>(() =>
       AppointmentRepositoryImpl(getIt<AppointmentApi>())
+  );
+  getIt.registerLazySingleton<MessageRepository>(() =>
+      MessageRepositoryImpl(getIt<MessageApi>())
   );
 
   // Domain Layer (use cases)
@@ -70,6 +79,9 @@ void main() {
   );
   getIt.registerLazySingleton<GetUserAppointmentsUseCase>(() =>
       GetUserAppointmentsUseCase(getIt<AppointmentRepository>())
+  );
+  getIt.registerLazySingleton<SendMessageUseCase>(() =>
+      SendMessageUseCase(getIt<MessageRepository>())
   );
 
   runApp(const MyApp());

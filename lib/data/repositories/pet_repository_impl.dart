@@ -8,7 +8,7 @@ class PetRepositoryImpl implements PetRepository {
   PetRepositoryImpl(this.petApi);
 
   @override
-  Future<bool> addPet(Pet pet) async {
+  Future<Pet?> addPet(Pet pet) async {
     return await petApi.addPet(pet);
   }
 
