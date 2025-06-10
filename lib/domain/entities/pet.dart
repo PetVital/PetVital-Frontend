@@ -29,7 +29,7 @@ class Pet {
     gender: json['genero'],
     age: json['edad'],
     timeUnit: json['unidad_tiempo'],
-    weight: (json['peso'] as num).toDouble(),
+    weight: double.parse(json['peso'].toString()),
     userId: json['usuario']['user_id'],
   );
 
