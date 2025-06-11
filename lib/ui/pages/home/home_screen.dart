@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../data/repositories/local_storage_service.dart';
 import '../../../core/utils/date_time_utils.dart';
+import '../../../core/utils/appointment_filter.dart';
 import '../../../application/get_home_data_use_case.dart';
 import '../../../domain/entities/homeResponse.dart';
 import '../../../domain/entities/user.dart';
+import '../../../domain/entities/pet.dart';
 import '../../../main.dart';
+import '../pets/pet_appointments.dart';
+import '../pets/pet_history.dart';
+import '../../../core/routes/app_routes.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -273,9 +278,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildInfoCard(Icons.favorite, "Salud", Colors.redAccent),
-                    _buildInfoCard(Icons.calendar_today, "Citas", Colors.blueAccent),
-                    _buildInfoCard(Icons.pets, "Actividad", Colors.greenAccent),
+                    _buildInfoCard(Icons.favorite, "Salud", Colors.redAccent, pet),
+                    _buildInfoCard(Icons.calendar_today, "Citas", Colors.blueAccent, pet),
+                    _buildInfoCard(Icons.pets, "Actividad", Colors.greenAccent, pet),
                   ],
                 ),
               ],
@@ -393,30 +398,66 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildInfoCard(IconData icon, String title, Color color) {
-    return Container(
-      width: 90,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
+  Widget _buildInfoCard(IconData icon, String title, Color color, Pet pet) {
+    return GestureDetector(
+      onTap: () {
+        switch (title) {
+          case "Salud":
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.main,
+                  (route) => false,
+              arguments: {
+                'initialIndex': 2,
+                'pet': pet, // 👈 Aquí pasas el objeto Pet completo
+              },
+            );
+            break;
+          case "Citas":
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PetAppointments(petId: pet.id),
+              ),
+            );
+            break;
+          case "Actividad":
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PetHistory(petId: pet.id),
+              ),
+            );
+            break;
+          default:
+            break;
+        }
+      },
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8)
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 5),
-          Text(
-            title,
-            style: TextStyle(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 5),
+            Text(
+              title,
+              style: TextStyle(
                 color: Colors.black.withOpacity(0.7),
                 fontSize: 14,
-                fontWeight: FontWeight.bold
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
 
   Widget _buildRemindersList() {
     if (isLoading) {
@@ -431,8 +472,18 @@ class _HomeScreenState extends State<HomeScreen> {
       return _buildNoRemindersWidget();
     }
 
+    // Filtrar solo las citas futuras usando AppointmentFilter
+    final futureAppointments = AppointmentFilter.filterFutureAppointments(
+      appointments: homeData!.appointments,
+    );
+
+    // Si no hay citas futuras, mostrar widget de "no hay citas"
+    if (futureAppointments.isEmpty) {
+      return _buildNoRemindersWidget();
+    }
+
     return Column(
-      children: homeData!.appointments.map((appointment) {
+      children: futureAppointments.map((appointment) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: _buildReminderCard(

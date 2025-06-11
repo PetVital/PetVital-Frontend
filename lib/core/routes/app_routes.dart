@@ -28,10 +28,23 @@ class AppRoutes {
     register: (_) => const RegisterScreen(),
 
     // Rutas de la aplicación principal
-    main: (_) => const MainPage(),
     home: (_) => const HomeScreen(),
     appointments: (_) => const AppointmentsScreen(),
     chat: (_) => const ChatScreen(),
     pets: (_) => const PetsScreen(),
   };
+
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    if (settings.name == main) {
+      final args = settings.arguments as Map<String, dynamic>?;
+
+      final initialIndex = args?['initialIndex'] ?? 0;
+
+      return MaterialPageRoute(
+        builder: (_) => MainPage(initialIndex: initialIndex),
+      );
+    }
+
+    return null; // para otras rutas no manejadas dinámicamente
+  }
 }

@@ -19,11 +19,11 @@ class AppointmentsScreen extends StatefulWidget {
 
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
   DateTime currentMonth = DateTime.now();
-  //TODO: mostrar proximas citas solo si la fecha es mayor o igual a hoy y la hora tambien
 
   // Datos reales
   List<Appointment> _appointments = [];
-  List<Map<String, dynamic>> _appointmentsUIData = [];
+  List<Map<String, dynamic>> _calendarAppointmentsUIData = []; // TODAS las citas
+  List<Map<String, dynamic>> _reminderAppointmentsUIData = []; // Solo citas futuras
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -45,45 +45,22 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       final appointments = await appointmentsUseCase.getUserAppointments();
 
       final now = DateTime.now();
-      final tomorrow = now.add(Duration(days: 1));
 
-      // Opción 1: Filtrar solo citas futuras (recomendado)
+      // Filtrar solo citas futuras para los recordatorios
       final filteredAppointments = AppointmentFilter.filterFutureAppointments(
         appointments: appointments!,
         fromDate: now,
       );
 
-      // Opción 2: Si quieres un rango específico, usa esto en su lugar:
-      /*
-      final now = DateTime.now();
-      final oneYearLater = DateTime(now.year + 1, now.month, now.day);
-
-      final filteredAppointments = AppointmentFilter.filterByDateRange(
-        appointments: appointments!,
-        startDateTime: now,
-        endDateTime: oneYearLater,
-      );
-      */
-
-        // Opción 3: Si quieres filtrar por el mes actual:
-        /*
-      final now = DateTime.now();
-      final filteredAppointments = AppointmentFilter.filterByMonth(
-        appointments: appointments!,
-        year: now.year,
-        month: now.month,
-      );
-      */
-
-      print('Total appointments: ${appointments!.length}');
-      print('Filtered appointments: ${filteredAppointments.length}');
-
-      // Transformar para la UI
-      final uiData = await AppointmentTransformer.appointmentsToUIFormat(filteredAppointments);
+      // Transformar TODAS las citas para el calendario
+      final calendarUiData = await AppointmentTransformer.appointmentsToUIFormat(appointments);
+      // Transformar solo las citas futuras para los recordatorios
+      final reminderUiData = await AppointmentTransformer.appointmentsToUIFormat(filteredAppointments);
 
       setState(() {
         _appointments = filteredAppointments;
-        _appointmentsUIData = uiData;
+        _calendarAppointmentsUIData = calendarUiData; // TODAS las citas
+        _reminderAppointmentsUIData = reminderUiData; // Solo citas futuras
         _isLoading = false;
       });
 
@@ -101,11 +78,31 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     await _loadData();
   }
 
-  // Métodos auxiliares (mantener los existentes)
-  Map<int, List<Map<String, dynamic>>> getAppointmentsForMonth(DateTime month) {
+  // MÉTODO PARA EL CALENDARIO - USA TODAS LAS CITAS
+  Map<int, List<Map<String, dynamic>>> getCalendarAppointmentsForMonth(DateTime month) {
     Map<int, List<Map<String, dynamic>>> monthAppointments = {};
 
-    for (var appointment in _appointmentsUIData) {
+    for (var appointment in _calendarAppointmentsUIData) { // USA TODAS LAS CITAS
+      final appointmentDate = appointment['date'];
+      if (appointmentDate['month'] == month.month &&
+          appointmentDate['year'] == month.year) {
+
+        final day = appointmentDate['day'];
+        if (!monthAppointments.containsKey(day)) {
+          monthAppointments[day] = [];
+        }
+        monthAppointments[day]!.add(appointment);
+      }
+    }
+
+    return monthAppointments;
+  }
+
+  // MÉTODO PARA LOS RECORDATORIOS - USA SOLO CITAS FUTURAS
+  Map<int, List<Map<String, dynamic>>> getReminderAppointmentsForMonth(DateTime month) {
+    Map<int, List<Map<String, dynamic>>> monthAppointments = {};
+
+    for (var appointment in _reminderAppointmentsUIData) { // USA SOLO CITAS FUTURAS
       final appointmentDate = appointment['date'];
       if (appointmentDate['month'] == month.month &&
           appointmentDate['year'] == month.year) {
@@ -371,12 +368,30 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Widget _buildCalendarDay(int day, {required bool isCurrentMonth}) {
-    final currentMonthAppointments = getAppointmentsForMonth(currentMonth);
+    // AQUÍ USA EL MÉTODO PARA EL CALENDARIO (TODAS LAS CITAS)
+    final currentMonthAppointments = getCalendarAppointmentsForMonth(currentMonth);
     final hasAppointment = isCurrentMonth && currentMonthAppointments.containsKey(day);
     final isToday = isCurrentMonth &&
         day == DateTime.now().day &&
         currentMonth.month == DateTime.now().month &&
         currentMonth.year == DateTime.now().year;
+
+    // Determinar si la cita es pasada o futura para diferentes colores
+    Color appointmentColor = const Color(0xFF8158B7); // Color por defecto
+
+    if (hasAppointment && isCurrentMonth) {
+      final currentDate = DateTime(currentMonth.year, currentMonth.month, day);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      if (currentDate.isBefore(today)) {
+        // Cita pasada - color más tenue
+        appointmentColor = Color(0xFFCCBFDF);
+      } else {
+        // Cita futura - color normal
+        appointmentColor = const Color(0xFF8158B7);
+      }
+    }
 
     return Expanded(
       child: Container(
@@ -390,7 +405,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             child: Container(
               decoration: BoxDecoration(
                 color: hasAppointment
-                    ? const Color(0xFF8158B7)
+                    ? appointmentColor
                     : isToday
                     ? Colors.blue.withOpacity(0.1)
                     : Colors.transparent,
@@ -425,10 +440,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Widget _buildAppointmentsList() {
-    final currentMonthAppointments = getAppointmentsForMonth(currentMonth);
+    // AQUÍ USA EL MÉTODO PARA LOS RECORDATORIOS (SOLO CITAS FUTURAS)
+    final currentMonthAppointments = getReminderAppointmentsForMonth(currentMonth);
     List<Map<String, dynamic>> allAppointments = [];
 
-    // Recopilar todas las citas del mes
+    // Recopilar todas las citas futuras del mes
     currentMonthAppointments.forEach((day, dayAppointments) {
       allAppointments.addAll(dayAppointments);
     });
@@ -449,7 +465,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     if (allAppointments.isEmpty) {
       return const Center(
         child: Text(
-          'No tienes citas programadas este mes',
+          'No tienes citas próximas este mes',
           style: TextStyle(
             color: Colors.grey,
             fontSize: 16,

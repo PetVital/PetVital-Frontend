@@ -67,4 +67,35 @@ class AppointmentApi {
     }
   }
 
+  /// Listar citas por mascota
+  Future<List<Appointment>?> getPetAppointments(int petId) async {
+    try {
+
+      final uri = Uri.parse('$baseUrl/citas/list/').replace(
+        queryParameters: {
+          'mascota_id': petId.toString(),
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonData = jsonDecode(response.body);
+        return jsonData.map((item) => Appointment.fromJson(item)).toList();
+      } else {
+        print('Error al obtener citas: ${response.statusCode}');
+        print('Detalle: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Excepción al obtener citas: $e');
+      return null;
+    }
+  }
+
 }

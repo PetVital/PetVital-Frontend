@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:petvital/data/repositories/message_repository_impl.dart';
+import 'package:petvital/ui/pages/main/main_page.dart';
 import 'core/routes/app_routes.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'domain/entities/pet.dart';
 //use cases
 import 'application/add_pet_use_case.dart';
 import 'application/get_home_data_use_case.dart';
@@ -12,6 +15,9 @@ import 'application/get_user_pets_use_case.dart';
 import 'application/add_appointment_use_case.dart';
 import 'application/get_user_appointmets_use_case.dart';
 import 'application/send_message_use_case.dart';
+import 'application/get_pet_appointments_use_case.dart';
+import 'application/delete_pet_use_case.dart';
+import 'application/update_pet_use_case.dart';
 //repository impl
 import 'data/repositories/user_repositoy_impl.dart';
 import 'data/repositories/pet_repository_impl.dart';
@@ -83,6 +89,15 @@ void main() {
   getIt.registerLazySingleton<SendMessageUseCase>(() =>
       SendMessageUseCase(getIt<MessageRepository>())
   );
+  getIt.registerLazySingleton<GetPetAppointmentsUseCase>(() =>
+      GetPetAppointmentsUseCase(getIt<AppointmentRepository>())
+  );
+  getIt.registerLazySingleton<DeletePetUseCase>(() =>
+      DeletePetUseCase(getIt<PetRepository>())
+  );
+  getIt.registerLazySingleton<UpdatePetUseCase>(() =>
+      UpdatePetUseCase(getIt<PetRepository>())
+  );
 
   runApp(const MyApp());
 }
@@ -115,6 +130,17 @@ class MyApp extends StatelessWidget {
       locale: const Locale('es', 'ES'),
       initialRoute: AppRoutes.welcome,  // Cambiado a la ruta de bienvenida
       routes: AppRoutes.routes,
+        onGenerateRoute: (settings) {
+          if (settings.name == AppRoutes.main) {
+            final args = settings.arguments as Map<String, dynamic>?;
+            final index = args?['initialIndex'] ?? 0;
+            final pet = args?['pet'] as Pet?;
+            return MaterialPageRoute(
+              builder: (_) => MainPage(initialIndex: index, pet: pet),
+            );
+          }
+          return null;
+        }
     );
   }
 }

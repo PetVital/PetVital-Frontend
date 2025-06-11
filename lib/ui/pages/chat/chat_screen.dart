@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../data/repositories/local_storage_service.dart';
 import '../../../domain/entities/message.dart';
+import '../../../domain/entities/pet.dart';
 import '../../../main.dart';
 import '../../../application/send_message_use_case.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({Key? key}) : super(key: key);
+  final Pet? pet;
+
+  const ChatScreen({Key? key, this.pet}) : super(key: key);
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -35,6 +38,12 @@ class _ChatScreenState extends State<ChatScreen> {
       // Intentar cargar mensajes existentes de la BD
       final existingMessages = await localStorageService.getAllMessages();
 
+      if(widget.pet!=null){
+        setState(() {
+          _messageController.text="Quiero hablar de mi mascota ${widget.pet?.name}";
+        });
+      }
+
       if (existingMessages.isNotEmpty) {
         // Si hay mensajes existentes, mostrarlos
         setState(() {
@@ -45,6 +54,8 @@ class _ChatScreenState extends State<ChatScreen> {
       } else {
         // Si no hay mensajes, generar mensaje de bienvenida
         await _generateAndStoreWelcomeMessage();
+
+
       }
 
       _scrollToBottom();

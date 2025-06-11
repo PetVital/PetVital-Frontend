@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
-import 'widgets/raza_selector.dart';
+import '../widgets/raza_selector.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
-import '../../data/repositories/local_storage_service.dart';
-import '../../domain/entities/pet.dart';
+import '../../../data/repositories/local_storage_service.dart';
+import '../../../domain/entities/pet.dart';
 import '../../../core/routes/app_routes.dart';
-import '../../../application/add_pet_use_case.dart';
+import '../../../application/update_pet_use_case.dart';
+import '../../../application/delete_pet_use_case.dart';
 import '../../../main.dart';
 
-class PetFormScreen extends StatefulWidget {
-  final bool isFirstTime;
+class PetEdit extends StatefulWidget {
+  final Pet pet;
 
-  const PetFormScreen({
+  const PetEdit({
     super.key,
-    this.isFirstTime = false,
+    required this.pet,
   });
 
   @override
-  State<PetFormScreen> createState() => _PetFormScreenState();
+  State<PetEdit> createState() => _PetEditState();
 }
 
-class _PetFormScreenState extends State<PetFormScreen> {
+class _PetEditState extends State<PetEdit> {
   final localStorageService = LocalStorageService();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -38,6 +39,22 @@ class _PetFormScreenState extends State<PetFormScreen> {
   String? _ageUnitError;
 
   @override
+  void initState() {
+    super.initState();
+    _loadPetData();
+  }
+
+  void _loadPetData() {
+    _nameController.text = widget.pet.name;
+    _ageController.text = widget.pet.age.toString();
+    _weightController.text = widget.pet.weight.toString();
+    _selectedPetType = widget.pet.type;
+    _selectedBreed = widget.pet.breed;
+    _selectedSex = widget.pet.gender;
+    _selectedTime = widget.pet.timeUnit;
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
@@ -45,7 +62,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
     super.dispose();
   }
 
-  void _submitForm() async {
+  void _updatePet() async {
     // Validar formulario y dropdowns
     bool isFormValid = _formKey.currentState!.validate();
 
@@ -62,10 +79,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
       return;
     }
 
-    final userId = await localStorageService.getCurrentUserId();
-
-    final pet = Pet(
-      id: 0, // no se usa en la creación
+    final updatedPet = Pet(
+      id: widget.pet.id,
       name: _nameController.text.trim(),
       type: _selectedPetType,
       breed: _selectedBreed!,
@@ -73,7 +88,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
       age: int.parse(_ageController.text.trim()),
       timeUnit: _selectedTime!,
       weight: double.parse(_weightController.text.trim()),
-      userId: userId
+      userId: widget.pet.userId,
     );
 
     try {
@@ -81,40 +96,84 @@ class _PetFormScreenState extends State<PetFormScreen> {
         _isLoading = true;
       });
 
-      final addPetUseCase = getIt<AddPetUseCase>();
-      final petResponse = await addPetUseCase.addPet(pet);
+      final updatePetUseCase = getIt<UpdatePetUseCase>();
+      final success = await updatePetUseCase.updatePet(updatedPet);
 
       setState(() {
         _isLoading = false;
       });
 
-      if (petResponse != null) {
-
-        await localStorageService.insertPet(petResponse);
-
-        _showSuccess("Mascota registrada exitosamente");
-
-        if (widget.isFirstTime) {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            AppRoutes.main,
-                (route) => false,
-          );
-        } else {
-          Navigator.pop(context);
-        }
+      if (success) {
+        await localStorageService.updatePet(updatedPet);
+        _showSuccess("Mascota actualizada exitosamente");
+        Navigator.pop(context, true);
       } else {
-        _showError('No se pudo registrar la mascota. Intenta nuevamente.');
+        _showError('No se pudo actualizar la mascota. Intenta nuevamente.');
       }
 
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      _showError('Error al guardar la mascota: ${e.toString()}');
+      _showError('Error al actualizar la mascota: ${e.toString()}');
     }
   }
 
+  void _deletePet() async {
+    // Mostrar diálogo de confirmación
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white, // Fondo blanco
+          title: const Text('Eliminar mascota'),
+          content: Text('¿Estás seguro de que quieres eliminar a ${widget.pet.name}? Esta acción no se puede deshacer.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true) return;
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final deletePetUseCase = getIt<DeletePetUseCase>();
+      final success = await deletePetUseCase.deletePet(widget.pet.id);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (success) {
+        await localStorageService.deletePet(widget.pet.id);
+        _showSuccess("Mascota eliminada exitosamente");
+        Navigator.pop(context, true);
+      } else {
+        _showError('No se pudo eliminar la mascota. Intenta nuevamente.');
+      }
+
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showError('Error al eliminar la mascota: ${e.toString()}');
+    }
+  }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -134,7 +193,6 @@ class _PetFormScreenState extends State<PetFormScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -145,7 +203,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
         automaticallyImplyLeading: false,
         titleSpacing: 0,
         title: Text(
-          widget.isFirstTime ? 'Agrega tu primera mascota' : 'Agrega una mascota',
+          'Editar mascota',
           style: const TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -153,19 +211,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black87),
-          onPressed: () {
-            if(widget.isFirstTime){
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.main,
-                    (route) => false, // Esto elimina todas las rutas anteriores
-              );
-            }else{
-              Navigator.pop(context);
-            }
-
-          },
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context, false),
         ),
       ),
       body: SafeArea(
@@ -180,7 +227,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
 
                 // Subtítulo
                 const Text(
-                  'Cuéntanos sobre tu compañero peludo',
+                  'Actualiza la información de tu mascota',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
@@ -697,61 +744,93 @@ class _PetFormScreenState extends State<PetFormScreen> {
 
                 const SizedBox(height: 32),
 
-                // Botón Continuar
-                SizedBox(
-                  width: double.infinity,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF8C52FF), Color(0xFF00A3FF)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
+                // Botones Eliminar y Actualizar
+                Row(
+                  children: [
+                    // Botón Eliminar
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: Colors.red, width: 1),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _deletePet,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                            ),
+                          )
+                              : const Text(
+                            'Eliminar',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(15),
                     ),
-                    child: ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
+
+                    const SizedBox(width: 16),
+
+                    // Botón Actualizar
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF8C52FF), Color(0xFF00A3FF)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
                           borderRadius: BorderRadius.circular(15),
                         ),
-                      ),
-                      child: const Text(
-                        'Continuar',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.white,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _updatePet,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                              : const Text(
+                            'Actualizar',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
 
-                // Mostrar "Omitir por ahora" solo si es primera vez
-                if (widget.isFirstTime) ...[
-                  const SizedBox(height: 16),
-                  Center(
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          AppRoutes.main,
-                              (route) => false, // Esto elimina todas las rutas anteriores
-                        );
-                      },
-                      child: const Text(
-                        'Omitir por ahora',
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontSize: 17,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
 
                 const SizedBox(height: 24),
               ],

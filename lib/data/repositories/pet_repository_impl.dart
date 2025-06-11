@@ -16,4 +16,14 @@ class PetRepositoryImpl implements PetRepository {
   Future<List<Pet>?> getUserPets() async{
     return await petApi.getUserPets();
   }
+
+  @override
+  Future<bool> deletePet(int petId) async {
+    return await petApi.deletePet(petId);
+  }
+
+  @override
+  Future<bool> updatePet(Pet pet) async {
+    return await petApi.updatePet(pet);
+  }
 }

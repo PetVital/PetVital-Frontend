@@ -204,7 +204,6 @@ class LocalStorageService {
     }
   }
 
-
   // Elimina una mascota por su ID
   Future<void> deletePet(int id) async {
     final db = await database;

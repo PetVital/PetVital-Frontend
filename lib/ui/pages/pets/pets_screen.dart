@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../data/repositories/local_storage_service.dart';
 import '../../../domain/entities/pet.dart';
 import '../pet_form_screen.dart';
+import 'pet_history.dart';
+import 'pet_appointments.dart';
+import 'pet_edit.dart';
 
 class PetsScreen extends StatefulWidget {
   const PetsScreen({Key? key}) : super(key: key);
@@ -258,18 +261,33 @@ class _PetsScreenState extends State<PetsScreen> {
                             ),
                           ),
                           // Edit icon
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(8),
+                          GestureDetector(
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PetEdit(pet: pet),
+                                ),
+                              );
+
+                              // Si se editó o eliminó la mascota, recargar la lista
+                              if (result == true) {
+                                _loadPets();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.edit,
+                                size: 20,
+                                color: Colors.blue[600],
+                              ),
                             ),
-                            child: Icon(
-                              Icons.edit,
-                              size: 20,
-                              color: Colors.blue[600],
-                            ),
-                          ),
+                          )
                         ],
                       ),
 
@@ -350,7 +368,12 @@ class _PetsScreenState extends State<PetsScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                // Navegar a historial
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PetHistory(petId: pet.id), // ← Asegúrate de tener pet.id disponible en este contexto
+                                  ),
+                                );
                               },
                               icon: Icon(
                                 Icons.history,
@@ -377,7 +400,12 @@ class _PetsScreenState extends State<PetsScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                // Navegar a citas
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PetAppointments(petId: pet.id), // ← Asegúrate de tener pet.id disponible en este contexto
+                                  ),
+                                );
                               },
                               icon: Icon(
                                 Icons.calendar_today,
