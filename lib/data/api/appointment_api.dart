@@ -67,6 +67,32 @@ class AppointmentApi {
     }
   }
 
+  Future<Appointment?> getAppointmentDetail(int appointmentId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/citas/detail/$appointmentId/');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return Appointment.fromJson(jsonData);
+      } else {
+        print('Error al obtener la cita: ${response.statusCode}');
+        print('Detalle: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Excepción al obtener la cita: $e');
+      return null;
+    }
+  }
+
+
   /// Listar citas por mascota
   Future<List<Appointment>?> getPetAppointments(int petId) async {
     try {
@@ -97,5 +123,29 @@ class AppointmentApi {
       return null;
     }
   }
+
+  Future<bool> deleteAppointment(int appointmentId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/citas/$appointmentId/'), // Asegúrate de que termina con /
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 204) {
+        print('Cita eliminada exitosamente.');
+        return true;
+      } else {
+        print('Error al eliminar la cita: ${response.statusCode}');
+        print('Detalle: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Excepción en deleteAppointment: $e');
+      return false;
+    }
+  }
+
 
 }

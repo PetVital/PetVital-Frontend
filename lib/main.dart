@@ -18,6 +18,8 @@ import 'application/send_message_use_case.dart';
 import 'application/get_pet_appointments_use_case.dart';
 import 'application/delete_pet_use_case.dart';
 import 'application/update_pet_use_case.dart';
+import 'application/get_appointment_detail_use_case.dart';
+import 'application/delete_appointment_use_case.dart';
 //repository impl
 import 'data/repositories/user_repositoy_impl.dart';
 import 'data/repositories/pet_repository_impl.dart';
@@ -97,6 +99,12 @@ void main() {
   );
   getIt.registerLazySingleton<UpdatePetUseCase>(() =>
       UpdatePetUseCase(getIt<PetRepository>())
+  );
+  getIt.registerLazySingleton<GetAppointmentDetailUseCase>(() =>
+      GetAppointmentDetailUseCase(getIt<AppointmentRepository>())
+  );
+  getIt.registerLazySingleton<DeleteAppointmentUseCase>(() =>
+      DeleteAppointmentUseCase(getIt<AppointmentRepository>())
   );
 
   runApp(const MyApp());

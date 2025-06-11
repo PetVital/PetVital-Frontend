@@ -6,10 +6,13 @@ import '../../../application/get_home_data_use_case.dart';
 import '../../../domain/entities/homeResponse.dart';
 import '../../../domain/entities/user.dart';
 import '../../../domain/entities/pet.dart';
+import '../../../domain/entities/appointment.dart';
 import '../../../main.dart';
 import '../pets/pet_appointments.dart';
+import '../appointments/appointments_details_screen.dart';
 import '../pets/pet_history.dart';
 import '../../../core/routes/app_routes.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -19,7 +22,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _notificationsOn = true;
   bool isLoading = true;
   String? errorMessage;
   HomeResponse? homeData;
@@ -66,40 +68,49 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // MÉTODO PARA REFRESCAR LOS DATOS
+  Future<void> _refreshData() async {
+    await _loadHomeData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header con degradado
-          _buildGradientHeader(),
-          // Cuerpo con carrusel y recordatorios
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Carrusel de mascotas
-                  _buildPetsCarousel(),
-                  const SizedBox(height: 24),
-                  // Próximos recordatorios
-                  const Text(
-                    'Próximos recordatorios',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C3E50),
+      body: RefreshIndicator(
+        onRefresh: _refreshData, // Pull to refresh
+        child: Column(
+          children: [
+            // Header con degradado
+            _buildGradientHeader(),
+            // Cuerpo con carrusel y recordatorios
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(), // Necesario para RefreshIndicator
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Carrusel de mascotas
+                    _buildPetsCarousel(),
+                    const SizedBox(height: 24),
+                    // Próximos recordatorios
+                    const Text(
+                      'Próximos recordatorios',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildRemindersList(),
-                ],
+                    const SizedBox(height: 16),
+                    _buildRemindersList(),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -152,26 +163,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // Icono de notificaciones
+              // Botón de planes premium con ícono de corona
               GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _notificationsOn = !_notificationsOn;
-                  });
+                  Navigator.pushNamed(context, '/premiumPlans');
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(8.0),
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    _notificationsOn ? Icons.notifications_active : Icons.notifications_off,
-                    color: Colors.white,
-                    size: 24,
+                  child: const Padding(
+                    padding: EdgeInsets.fromLTRB(9, 8, 10, 8), // Más espacio a la derecha
+                    child: Icon(
+                      FontAwesomeIcons.crown,
+                      color: Color(0xFFFFFFFF),
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
+
             ],
           ),
         ),
@@ -487,10 +501,11 @@ class _HomeScreenState extends State<HomeScreen> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: _buildReminderCard(
-            title: appointment.name,
-            time: DateTimeUtils.formatDateTime(appointment.date, appointment.time),
-            color: _getColorForReminderType(appointment.type),
-            icon: _getIconForReminderType(appointment.type),
+              title: appointment.name,
+              time: DateTimeUtils.formatDateTime(appointment.date, appointment.time),
+              color: _getColorForReminderType(appointment.type),
+              icon: _getIconForReminderType(appointment.type),
+              appointment: appointment
           ),
         );
       }).toList(),
@@ -649,6 +664,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String time,
     required Color color,
     required IconData icon,
+    required Appointment appointment
   }) {
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -708,9 +724,25 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            color: Colors.grey[400],
+          GestureDetector(
+            onTap: () async {
+              // AQUÍ ES LA MAGIA: Esperar el resultado cuando regreses
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AppointmentsDetailsScreen(appointment: appointment),
+                ),
+              );
+
+              // Si se eliminó la cita (result == true), refresca los datos
+              if (result == true) {
+                await _refreshData();
+              }
+            },
+            child: Icon(
+              Icons.chevron_right,
+              color: Colors.grey[400],
+            ),
           ),
         ],
       ),

@@ -22,4 +22,14 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
     return await appointmentApi.getPetAppointments(petId); // ← Llamada nombrada
   }
 
+  @override
+  Future<Appointment?> getAppointmentDetail(int appointmentId) async {
+    return await appointmentApi.getAppointmentDetail(appointmentId); // ← Llamada nombrada
+  }
+
+  @override
+  Future<bool> deleteAppointment(int appointmentId) async {
+    return await appointmentApi.deleteAppointment(appointmentId);
+  }
+
 }
