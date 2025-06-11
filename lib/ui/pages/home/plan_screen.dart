@@ -497,4 +497,13 @@ class _PlanScreenState extends State<PlanScreen> {
       }
     }
   }
+
+  void _testLaunch() async {
+    final uri = Uri.parse('https://flutter.dev');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      print('No se pudo lanzar');
+    }
+  }
 }
