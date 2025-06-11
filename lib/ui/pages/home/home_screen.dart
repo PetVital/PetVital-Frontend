@@ -13,6 +13,7 @@ import '../appointments/appointments_details_screen.dart';
 import '../pets/pet_history.dart';
 import '../../../core/routes/app_routes.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'plan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -166,7 +167,12 @@ class _HomeScreenState extends State<HomeScreen> {
               // Botón de planes premium con ícono de corona
               GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, '/premiumPlans');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PlanScreen(),
+                    ),
+                  );
                 },
                 child: Container(
                   width: 40,
