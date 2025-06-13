@@ -101,7 +101,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
                 (route) => false,
           );
         } else {
-          Navigator.pop(context);
+          Navigator.pop(context, petResponse);
         }
       } else {
         _showError('No se pudo registrar la mascota. Intenta nuevamente.');

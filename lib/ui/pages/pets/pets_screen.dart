@@ -442,16 +442,19 @@ class _PetsScreenState extends State<PetsScreen> {
         backgroundColor: Colors.blue[600],
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () async {
-          final result = await Navigator.push(
+          final Pet? newPet = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const PetFormScreen(isFirstTime: false),
             ),
           );
 
-          // Si se agregó una nueva mascota, recargar la lista
-          if (result == true) {
-            _loadPets();
+          if (newPet != null) {
+            setState(() {
+              pets.add(newPet);
+            });
+            // O si prefieres mantener sincronizado con el almacenamiento local:
+            // await _loadPets();
           }
         },
       ),
