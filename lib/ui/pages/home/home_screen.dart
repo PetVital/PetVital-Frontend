@@ -118,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildGradientHeader() {
     return Container(
-      height: 180,
+      height: 170,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
@@ -155,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Bienvenida a PetVital',
+                      'Bienvenido a PetVital',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.9),
                         fontSize: 16,
