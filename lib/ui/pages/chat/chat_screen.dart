@@ -54,8 +54,6 @@ class _ChatScreenState extends State<ChatScreen> {
       } else {
         // Si no hay mensajes, generar mensaje de bienvenida
         await _generateAndStoreWelcomeMessage();
-
-
       }
 
       _scrollToBottom();
@@ -153,12 +151,20 @@ class _ChatScreenState extends State<ChatScreen> {
       timestamp: DateTime.now().toIso8601String(),
     );
 
+    _storeMessage(newMessage);
+    setState(() {
+      messages.add(newMessage);
+    });
+
     _messageController.clear();
 
     try {
       setState(() {
         _isbotTyping = true;
       });
+
+      // Hacer scroll para mostrar el indicador de escritura
+      _scrollToBottom();
 
       final sendMessageUseCase = getIt<SendMessageUseCase>();
       final messageResponse = await sendMessageUseCase.sendMessage(newMessage);
@@ -168,16 +174,10 @@ class _ChatScreenState extends State<ChatScreen> {
       });
 
       if (messageResponse != null) {
-        _storeMessage(newMessage);
-        setState(() {
-          messages.add(newMessage);
-        });
-
         _storeMessage(messageResponse);
         setState(() {
           messages.add(messageResponse);
         });
-
       } else {
         _showError('No se pudo registrar la mascota. Intenta nuevamente.');
       }
@@ -189,7 +189,6 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       _showError('Error al guardar la mascota: ${e.toString()}');
     }
-
   }
 
   void _showError(String message) {
@@ -303,11 +302,65 @@ class _ChatScreenState extends State<ChatScreen> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: messages.length,
+      itemCount: messages.length + (_isbotTyping ? 1 : 0), // Agregar 1 si el bot está escribiendo
       itemBuilder: (context, index) {
+        // Si es el último item y el bot está escribiendo, mostrar indicador
+        if (index == messages.length && _isbotTyping) {
+          return _buildTypingIndicator();
+        }
+
         final message = messages[index];
         return _buildMessageBubble(message);
       },
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            margin: const EdgeInsets.only(right: 8, top: 4),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF8158B7), Color(0xFF35B4DD)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.smart_toy,
+              color: Colors.white,
+              size: 16,
+            ),
+          ),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF8158B7), Color(0xFF35B4DD)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(4),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: const TypingAnimation(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -460,5 +513,77 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+}
+
+// Widget personalizado para la animación de los tres puntitos
+class TypingAnimation extends StatefulWidget {
+  const TypingAnimation({Key? key}) : super(key: key);
+
+  @override
+  State<TypingAnimation> createState() => _TypingAnimationState();
+}
+
+class _TypingAnimationState extends State<TypingAnimation>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.3,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _animationController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildDot(0),
+            const SizedBox(width: 4),
+            _buildDot(1),
+            const SizedBox(width: 4),
+            _buildDot(2),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDot(int index) {
+    final delay = index * 0.2;
+    final opacity = (_fadeAnimation.value + delay).clamp(0.3, 1.0);
+
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(opacity),
+        shape: BoxShape.circle,
+      ),
+    );
   }
 }
