@@ -27,12 +27,20 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
   List<Pet>? _pets;
   bool _isLoadingPets = false;
   bool _isLoading = false;
+  String? _selectedReminder = '1 día antes';
 
   final List<AppointmentType> _appointmentTypes = [
     AppointmentType('Vacuna', Icons.vaccines, Colors.purple),
     AppointmentType('Baño', Icons.bathtub, Colors.blue),
     AppointmentType('Medicina', Icons.medical_services, Colors.teal),
     AppointmentType('Otro', Icons.add, Colors.grey),
+  ];
+
+  final List<String> _reminderOptions = [
+    'Sin recordatorio',
+    '30 minutos antes',
+    '1 hora antes',
+    '1 día antes',
   ];
 
   @override
@@ -205,7 +213,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
           date: formattedDate, // fecha en formato yyyy-mm-dd
           time: formattedTime, // hora en formato 24h
           note: _notesController.text.trim().isEmpty ? '' : _notesController.text.trim(), // nota (puede estar vacía)
-          reminder: '', // recordatorio (por ahora vacío, puedes ajustar según necesites)
+          reminder: _selectedReminder ?? '', // recordatorio seleccionado
           petId: _selectedPet!.id, // mascota.id
         );
 
@@ -570,6 +578,62 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+
+              // Recordatorio
+              const Text(
+                'Recordatorio',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField2<String>(
+                isExpanded: true,
+                decoration: InputDecoration(
+                  fillColor: Colors.grey[100],
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
+                ),
+                hint: const Text(
+                  'Selecciona recordatorio',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                value: _selectedReminder,
+                items: _reminderOptions.map((String option) {
+                  return DropdownMenuItem<String>(
+                    value: option,
+                    child: Text(
+                      option,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (String? value) {
+                  setState(() {
+                    _selectedReminder = value;
+                  });
+                },
+                dropdownStyleData: DropdownStyleData(
+                  maxHeight: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
               const SizedBox(height: 32),
 
               // Botón de guardar
@@ -600,12 +664,12 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     )
                         : const Text(
                       'Guardar Cita',

@@ -147,7 +147,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          'Citas Veterinarias',
+          'Recordatorios',
           style: TextStyle(
             color: Colors.black,
             fontSize: 25,

@@ -101,14 +101,17 @@ class BottomNavigationWidget extends StatelessWidget {
               ),
               const SizedBox(height: 0),
               // Label
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: isActive ? const Color(0xFF8C52FF) : Colors.grey[600],
-                  fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: isActive ? const Color(0xFF8C52FF) : Colors.grey[600],
+                    fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+                  ),
                 ),
-              ),
+              )
             ],
           ),
         ),

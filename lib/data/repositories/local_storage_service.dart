@@ -25,13 +25,22 @@ class LocalStorageService {
     String path = await getDatabasesPath();
     String dbPath = join(path, 'pet_vital.db');
 
-    await deleteDatabase(dbPath); // <- elimina base de datos anterior
+    //await deleteDatabase(dbPath); // <- elimina base de datos anterior
 
     return await openDatabase(
       join(path, 'pet_vital.db'),
       version: 1,
       onCreate: (db, version) async {
         print("Creating database tables...");
+
+        await db.execute('''        
+          CREATE TABLE IF NOT EXISTS UserCredentials(
+            id INTEGER PRIMARY KEY,
+            email TEXT,
+            password TEXT,
+            rememberMe INTEGER
+          )
+        ''');
 
         await db.execute(''' 
           CREATE TABLE IF NOT EXISTS User(
@@ -79,6 +88,31 @@ class LocalStorageService {
     final path = join(await getDatabasesPath(), 'pet_vital.db');
     await deleteDatabase(path);
     print("");
+  }
+
+  Future<void> saveCredentials(String email, String password, bool rememberMe) async {
+    final db = await database;
+    await db.delete('UserCredentials'); // Clear previous credentials
+    await db.insert('UserCredentials', {
+      'email': email,
+      'password': password,
+      'rememberMe': rememberMe ? 1 : 0,
+    });
+  }
+
+  Future<Map<String, dynamic>?> getCredentials() async {
+    final db = await database;
+    var results = await db.query('UserCredentials',
+        where: 'rememberMe = ?', whereArgs: [1], limit: 1);
+    if (results.isNotEmpty) {
+      return results.first;
+    }
+    return null;
+  }
+
+  Future<void> clearCredentials() async {
+    final db = await database;
+    await db.delete('UserCredentials');
   }
 
   Future saveUser(User user) async {

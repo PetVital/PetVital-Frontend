@@ -20,13 +20,34 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _rememberMe = false;
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _loadSavedCredentials() async {
+    print("Cargando credenciales");
+    final credentials = await localStorageService.getCredentials();
+    if (credentials != null) {
+
+      print("ECONTRE");
+      setState(() {
+        _emailController.text = credentials['email'];
+        _passwordController.text = credentials['password'];
+        _rememberMe = true;
+      });
+    }
   }
 
   void _showError(String message) {
@@ -53,6 +74,16 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (loginResponse!=null) {
+
+          if (_rememberMe) {
+            await localStorageService.saveCredentials(
+              _emailController.text,
+              _passwordController.text,
+              true,
+            );
+          } else {
+            await localStorageService.clearCredentials();
+          }
 
           setState(() {
             _isLoading=false;
@@ -211,6 +242,39 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _rememberMe,
+                      onChanged: (bool? value) {
+                        setState(() {
+                          _rememberMe = value ?? false;
+                          if (_rememberMe == false) {
+                            localStorageService.clearCredentials();
+                          }
+                        });
+                      },
+                      activeColor: Color(
+                          0xFF7566FC), // El color del fondo cuando está activo
+                      checkColor: Colors.white, // Color del check dentro del checkbox
+                      side: const BorderSide(
+                          color: Color(
+                              0xFF7566FC), width: 2), // Borde blanco
+                    ),
+                    const Text(
+                      'Recordar credenciales',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
 
                 const SizedBox(height: 32),
 

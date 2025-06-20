@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../application/get_pet_appointments_use_case.dart';
-import '../../../domain/entities/appointment.dart';
-import '../../../core/utils/appointment_filter.dart';
+import '../../../application/get_pet_checkups_use_case.dart';
+import '../../../application/delete_checkup_use_case.dart';
+import '../../../domain/entities/checkup.dart';
 import '../../../core/utils/date_time_utils.dart';
 import '../../../main.dart';
+import 'checkup_form_screen.dart';
 
 class PetHistory extends StatefulWidget {
   final int petId;
@@ -20,7 +21,8 @@ class PetHistory extends StatefulWidget {
 class _PetHistoryState extends State<PetHistory> {
   bool isLoading = true;
   String? errorMessage;
-  List<Appointment> appointments = [];
+  List<Checkup> checkups = [];
+  String selectedSterilizationStatus = 'Sin esterilizar';
 
   @override
   void initState() {
@@ -29,110 +31,69 @@ class _PetHistoryState extends State<PetHistory> {
   }
 
   Future<void> _loadData() async {
+    print("CARGANDO DATA");
     setState(() {
       isLoading = true;
       errorMessage = null;
     });
 
     try {
-      final appointmentsUseCase = getIt<GetPetAppointmentsUseCase>();
-      final allAppointments = await appointmentsUseCase.getPetAppointments(widget.petId);
+      final checkupsUseCase = getIt<GetPetCheckupsUseCase>();
+      final allCheckups = await checkupsUseCase.getPetCheckups(widget.petId);
 
-      if (allAppointments != null) {
-        // Filtrar solo citas pasadas (anteriores a la fecha/hora actual)
-        final pastAppointments = _filterPastAppointments(allAppointments);
+      if (allCheckups != null) {
+        // Ordenar de más reciente a más antigua (descendente)
+        final sortedCheckups = _sortCheckupsByDate(allCheckups);
 
         setState(() {
-          appointments = pastAppointments;
+          checkups = sortedCheckups;
           isLoading = false;
         });
       } else {
         setState(() {
           isLoading = false;
-          errorMessage = 'No se pudieron cargar las citas';
+          errorMessage = 'No se pudieron cargar los checkups';
         });
       }
     } catch (e) {
-      print('Error loading appointments: $e');
+      print('Error loading checkups: $e');
       setState(() {
-        errorMessage = 'Error al cargar las citas: $e';
+        errorMessage = 'Error al cargar el historial: $e';
         isLoading = false;
       });
     }
   }
 
-  List<Appointment> _filterPastAppointments(List<Appointment> allAppointments) {
-    final now = DateTime.now();
-    final pastAppointments = <Appointment>[];
+  List<Checkup> _sortCheckupsByDate(List<Checkup> allCheckups) {
+    final sortedCheckups = List<Checkup>.from(allCheckups);
 
-    for (final appointment in allAppointments) {
-      try {
-        final datePart = DateTime.parse(appointment.date);
-        final timeParts = appointment.time.split(':');
-        final fullDateTime = DateTime(
-          datePart.year,
-          datePart.month,
-          datePart.day,
-          int.parse(timeParts[0]),
-          int.parse(timeParts[1]),
-          timeParts.length > 2 ? int.parse(timeParts[2]) : 0,
-        );
-
-        if (fullDateTime.isBefore(now)) {
-          pastAppointments.add(appointment);
-        }
-      } catch (e) {
-        print('Error parsing appointment date/time: $e');
-      }
-    }
-
-    // Ordenar de más reciente a más antigua (descendente)
-    pastAppointments.sort((a, b) {
+    sortedCheckups.sort((a, b) {
       try {
         final dateA = DateTime.parse(a.date);
-        final timePartsA = a.time.split(':');
-        final fullDateTimeA = DateTime(
-          dateA.year,
-          dateA.month,
-          dateA.day,
-          int.parse(timePartsA[0]),
-          int.parse(timePartsA[1]),
-          timePartsA.length > 2 ? int.parse(timePartsA[2]) : 0,
-        );
-
         final dateB = DateTime.parse(b.date);
-        final timePartsB = b.time.split(':');
-        final fullDateTimeB = DateTime(
-          dateB.year,
-          dateB.month,
-          dateB.day,
-          int.parse(timePartsB[0]),
-          int.parse(timePartsB[1]),
-          timePartsB.length > 2 ? int.parse(timePartsB[2]) : 0,
-        );
-
-        return fullDateTimeB.compareTo(fullDateTimeA); // Orden descendente
+        return dateB.compareTo(dateA); // Orden descendente (más reciente primero)
       } catch (e) {
         return 0;
       }
     });
 
-    return pastAppointments;
+    return sortedCheckups;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'Historial de Citas',
+          'Historial Médico',
           style: TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
+            fontSize: 25
           ),
         ),
-        backgroundColor: Color(0xFFFFFFFF),
+        backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black87),
         elevation: 0,
       ),
@@ -141,30 +102,96 @@ class _PetHistoryState extends State<PetHistory> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.history,
-                  color: Colors.grey[600],
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Historial de citas completadas',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
-                  ),
-                ),
-              ],
-            ),
+            _buildPetInfoSection(),
             const SizedBox(height: 20),
             Expanded(
               child: _buildHistoryList(),
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blue[600],
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CheckupFormScreen( petId:widget.petId, isEditMode: false),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPetInfoSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          // Pet name and info on the left
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Rocky',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Labrador - 3 años',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Sterilization dropdown on the right
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedSterilizationStatus,
+                isDense: true,
+                icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                dropdownColor: Colors.white,
+                items: ['Sin esterilizar', 'Esterilizado'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(
+                      value,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      selectedSterilizationStatus = newValue;
+                    });
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -178,69 +205,181 @@ class _PetHistoryState extends State<PetHistory> {
       return _buildErrorWidget(errorMessage!);
     }
 
-    if (appointments.isEmpty) {
+    if (checkups.isEmpty) {
       return _buildNoHistoryWidget();
     }
 
-    return ListView.builder(
-      itemCount: appointments.length,
-      itemBuilder: (context, index) {
-        final appointment = appointments[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildHistoryCard(
-            title: appointment.name,
-            time: DateTimeUtils.formatDateTime(appointment.date, appointment.time),
-            type: appointment.type,
-            isCompleted: true,
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
-        );
-      },
+        ],
+      ),
+      child: ListView.builder(
+        itemCount: checkups.length,
+        itemBuilder: (context, index) {
+          final checkup = checkups[index];
+          final isLast = index == checkups.length - 1;
+          return _buildTimelineItem(
+            checkup: checkup,
+            isLast: isLast,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTimelineItem({
+    required Checkup checkup,
+    required bool isLast,
+  }) {
+    final formattedDate = _formatDate(checkup.date);
+    final backgroundColor = _getBackgroundColorForType(checkup.title);
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline column
+          Column(
+            children: [
+              // Circle dot
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              // Vertical line (if not last item)
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: Colors.grey[300],
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          // Content
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 50),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title and date row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          checkup.title,
+                          style: const TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Description
+                  Text(
+                    checkup.description,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildHistoryLoadingList() {
-    return Column(
-      children: List.generate(4, (index) =>
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: List.generate(4, (index) {
+          final isLast = index == 3;
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Timeline column
+                Column(
+                  children: [
+                    // Circle dot with loading
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 8,
+                          height: 8,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
+                    // Vertical line (if not last item)
+                    if (!isLast)
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: Colors.grey[300],
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                // Content
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -262,10 +401,11 @@ class _PetHistoryState extends State<PetHistory> {
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
+          );
+        }),
       ),
     );
   }
@@ -296,7 +436,7 @@ class _PetHistoryState extends State<PetHistory> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Sin historial de citas',
+              'Sin historial médico',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 18,
@@ -305,7 +445,7 @@ class _PetHistoryState extends State<PetHistory> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Aún no hay citas completadas\npara esta mascota',
+              'Aún no hay registros médicos\npara esta mascota',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey[500],
@@ -335,7 +475,7 @@ class _PetHistoryState extends State<PetHistory> {
               color: Colors.red[600],
               size: 48,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(height: 16),
             Text(
               'Error al cargar el historial',
               style: TextStyle(
@@ -359,154 +499,29 @@ class _PetHistoryState extends State<PetHistory> {
     );
   }
 
-  Widget _buildHistoryCard({
-    required String title,
-    required String time,
-    required String type,
-    required bool isCompleted,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(
-            color: Colors.grey[400]!,
-            width: 4.0,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _getHistoryIconForType(type),
-              color: Colors.grey[600],
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: Colors.green[600],
-                            size: 14,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Completado',
-                            style: TextStyle(
-                              color: Colors.green[600],
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      color: Colors.grey[500],
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      time,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        type,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.history,
-            color: Colors.grey[400],
-            size: 20,
-          ),
-        ],
-      ),
-    );
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final months = [
+        'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+      ];
+      return '${date.day.toString().padLeft(2, '0')}/${months[date.month - 1]}/${date.year}';
+    } catch (e) {
+      return dateString;
+    }
   }
 
-  IconData _getHistoryIconForType(String type) {
-    switch (type.toLowerCase()) {
-      case 'vacuna':
-        return Icons.vaccines;
-      case 'baño':
-      case 'peluquería':
-        return Icons.shower;
-      case 'control':
-      case 'consulta':
-        return Icons.local_hospital;
-      case 'medicamento':
-        return Icons.medication;
-      case 'cirugia':
-        return Icons.healing;
-      default:
-        return Icons.medical_services;
+  Color _getBackgroundColorForType(String title) {
+    final titleLower = title.toLowerCase();
+    if (titleLower.contains('vacun')) {
+      return Colors.blue;
+    } else if (titleLower.contains('revisión') || titleLower.contains('general')) {
+      return Colors.purple;
+    } else if (titleLower.contains('desparasit')) {
+      return Colors.teal;
+    } else {
+      return Colors.grey;
     }
   }
 }

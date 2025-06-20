@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:petvital/application/delete_checkup_use_case.dart';
+import 'package:petvital/application/get_pet_checkups_use_case.dart';
 import 'package:petvital/data/repositories/message_repository_impl.dart';
 import 'package:petvital/ui/pages/main/main_page.dart';
 import 'core/routes/app_routes.dart';
@@ -20,11 +22,14 @@ import 'application/delete_pet_use_case.dart';
 import 'application/update_pet_use_case.dart';
 import 'application/get_appointment_detail_use_case.dart';
 import 'application/delete_appointment_use_case.dart';
+import 'application/add_checkup_use_case.dart';
+import 'application/update_checkup_use_case.dart';
 //repository impl
 import 'data/repositories/user_repositoy_impl.dart';
 import 'data/repositories/pet_repository_impl.dart';
 import 'data/repositories/home_repository_impl.dart';
 import 'data/repositories/appointment_repository_impl.dart';
+import 'data/repositories/checkup_repository_impl.dart';
 import 'data/repositories/local_storage_service.dart';
 //repository
 import 'domain/repositories/user_repository.dart';
@@ -32,12 +37,14 @@ import 'domain/repositories/pet_repository.dart';
 import 'domain/repositories/home_repository.dart';
 import 'domain/repositories/appointment_repository.dart';
 import 'domain/repositories/message_repository.dart';
+import 'domain/repositories/checkup_repository.dart';
 //api
 import 'data/api/user_api.dart';
 import 'data/api/pet_api.dart';
 import 'data/api/home_api.dart';
 import 'data/api/appointment_api.dart';
 import 'data/api/message_api.dart';
+import 'data/api/checkup_api.dart';
 
 final getIt = GetIt.instance;
 
@@ -48,6 +55,7 @@ void main() {
   getIt.registerLazySingleton<HomeApi>(() => HomeApi());
   getIt.registerLazySingleton<AppointmentApi>(() => AppointmentApi());
   getIt.registerLazySingleton<MessageApi>(() => MessageApi());
+  getIt.registerLazySingleton<CheckupApi>(() => CheckupApi());
 
   // Data Layer - Repositories
   getIt.registerLazySingleton<UserRepository>(() =>
@@ -64,6 +72,9 @@ void main() {
   );
   getIt.registerLazySingleton<MessageRepository>(() =>
       MessageRepositoryImpl(getIt<MessageApi>())
+  );
+  getIt.registerLazySingleton<CheckupRepository>(() =>
+      CheckupRepositoryImpl(getIt<CheckupApi>())
   );
 
   // Domain Layer (use cases)
@@ -105,6 +116,18 @@ void main() {
   );
   getIt.registerLazySingleton<DeleteAppointmentUseCase>(() =>
       DeleteAppointmentUseCase(getIt<AppointmentRepository>())
+  );
+  getIt.registerLazySingleton<AddCheckupUseCase>(() =>
+      AddCheckupUseCase(getIt<CheckupRepository>())
+  );
+  getIt.registerLazySingleton<GetPetCheckupsUseCase>(() =>
+      GetPetCheckupsUseCase(getIt<CheckupRepository>())
+  );
+  getIt.registerLazySingleton<DeleteCheckupUseCase>(() =>
+      DeleteCheckupUseCase(getIt<CheckupRepository>())
+  );
+  getIt.registerLazySingleton<UpdateCheckupUseCase>(() =>
+      UpdateCheckupUseCase(getIt<CheckupRepository>())
   );
 
   runApp(const MyApp());
