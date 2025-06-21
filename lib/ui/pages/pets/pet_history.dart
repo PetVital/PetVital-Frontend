@@ -8,6 +8,7 @@ import '../../../core/utils/date_time_utils.dart';
 import '../../../main.dart';
 import 'checkup_form_screen.dart';
 import 'checkup_details_screen.dart';
+import '../../../application/update_pet_use_case.dart';
 
 class PetHistory extends StatefulWidget {
   final int petId;
@@ -216,17 +217,16 @@ class _PetHistoryState extends State<PetHistory> {
     );
   }
 
-  void changeSterilize(String value) {
+  Future<void> changeSterilize(String value) async {
+    // 1. Actualizar UI inmediatamente para mejor UX
     setState(() {
       selectedSterilizationStatus = value;
     });
 
     final isSterilized = value == 'Esterilizado';
-    _storageService.setPetSterilized(widget.petId, isSterilized);
-
     print("VALOR DE: $isSterilized");
 
-    // Actualizar el valor del currentPet
+    // 2. Actualizar el objeto currentPet
     if (currentPet != null) {
       currentPet = Pet(
         id: currentPet!.id,
@@ -238,13 +238,53 @@ class _PetHistoryState extends State<PetHistory> {
         type: currentPet!.type,
         gender: currentPet!.gender,
         timeUnit: currentPet!.timeUnit,
-        userId: currentPet!.userId,    // Actualizar el estado de esterilización
-        // Agregar otros campos que tenga tu clase Pet
+        userId: currentPet!.userId,
       );
     }
 
-    // Debug opcional
+    // 3. Hacer las actualizaciones en la base de datos
+    try {
+      final updatePetUseCase = getIt<UpdatePetUseCase>();
+      final success = await updatePetUseCase.updatePet(currentPet!);
+
+      if (success) {
+        // 4. Actualizar storage local solo si la actualización remota fue exitosa
+        await _storageService.setPetSterilized(widget.petId, isSterilized);
+        _showSuccess("Estado de esterilización actualizado exitosamente");
+      } else {
+        // 5. Revertir cambios en UI si falló
+        setState(() {
+          selectedSterilizationStatus = currentPet!.isSterilized ? 'Esterilizado' : 'Sin esterilizar';
+        });
+        _showError('No se pudo actualizar la mascota. Intenta nuevamente.');
+      }
+    } catch (e) {
+      // 6. Revertir cambios en UI si hubo error
+      setState(() {
+        selectedSterilizationStatus = currentPet!.isSterilized ? 'Esterilizado' : 'Sin esterilizar';
+      });
+      _showError('Error al actualizar la mascota: ${e.toString()}');
+    }
+
     print('🔁 Cambio de esterilización: $value');
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: Colors.white), // Letras blancas
+        ),
+        backgroundColor: Colors.green, // Fondo verde
+      ),
+    );
   }
 
   Widget _buildHistoryList() {

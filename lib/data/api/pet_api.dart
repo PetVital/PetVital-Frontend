@@ -97,6 +97,7 @@ class PetApi {
       'edad': pet.age,
       'unidad_tiempo': pet.timeUnit,
       'peso': pet.weight,
+      'esterilizado': pet.isSterilized,
       'usuario': pet.userId,
     };
 
