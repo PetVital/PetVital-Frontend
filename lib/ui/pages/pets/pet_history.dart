@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../application/get_pet_checkups_use_case.dart';
 import '../../../application/delete_checkup_use_case.dart';
+import '../../../data/repositories/local_storage_service.dart';
 import '../../../domain/entities/checkup.dart';
+import '../../../domain/entities/pet.dart';
 import '../../../core/utils/date_time_utils.dart';
 import '../../../main.dart';
 import 'checkup_form_screen.dart';
+import 'checkup_details_screen.dart';
 
 class PetHistory extends StatefulWidget {
   final int petId;
@@ -23,6 +26,9 @@ class _PetHistoryState extends State<PetHistory> {
   String? errorMessage;
   List<Checkup> checkups = [];
   String selectedSterilizationStatus = 'Sin esterilizar';
+  Pet? currentPet; // Cambiado de Pet currentPet = null; a Pet? currentPet;
+
+  final LocalStorageService _storageService = LocalStorageService();
 
   @override
   void initState() {
@@ -31,13 +37,24 @@ class _PetHistoryState extends State<PetHistory> {
   }
 
   Future<void> _loadData() async {
-    print("CARGANDO DATA");
     setState(() {
       isLoading = true;
       errorMessage = null;
     });
 
     try {
+      // Obtener la mascota una sola vez y guardarla en currentPet
+      currentPet = await _storageService.getPetById(widget.petId);
+
+      // Usar currentPet para obtener el estado de esterilización
+      final isSterilized = currentPet?.isSterilized ?? false;
+
+      setState(() {
+        selectedSterilizationStatus = isSterilized
+            ? 'Esterilizado'
+            : 'Sin esterilizar';
+      });
+
       final checkupsUseCase = getIt<GetPetCheckupsUseCase>();
       final allCheckups = await checkupsUseCase.getPetCheckups(widget.petId);
 
@@ -88,9 +105,9 @@ class _PetHistoryState extends State<PetHistory> {
         title: const Text(
           'Historial Médico',
           style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 25
+              color: Colors.black87,
+              fontWeight: FontWeight.bold,
+              fontSize: 25
           ),
         ),
         backgroundColor: Colors.white,
@@ -120,6 +137,11 @@ class _PetHistoryState extends State<PetHistory> {
               builder: (context) => CheckupFormScreen( petId:widget.petId, isEditMode: false),
             ),
           );
+
+          // Si el resultado fue exitoso, recargar los datos
+          if (result == true) {
+            _loadData();
+          }
         },
       ),
     );
@@ -135,22 +157,22 @@ class _PetHistoryState extends State<PetHistory> {
       child: Row(
         children: [
           // Pet name and info on the left
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Rocky',
-                  style: TextStyle(
+                  currentPet?.name ?? 'Nombre desconocido', // Usar currentPet en lugar de hardcoded
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Labrador - 3 años',
-                  style: TextStyle(
+                  '${currentPet?.breed ?? 'Raza desconocida'} - ${currentPet?.age ?? 0} años', // Usar currentPet
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
                   ),
@@ -183,9 +205,7 @@ class _PetHistoryState extends State<PetHistory> {
                 }).toList(),
                 onChanged: (String? newValue) {
                   if (newValue != null) {
-                    setState(() {
-                      selectedSterilizationStatus = newValue;
-                    });
+                    changeSterilize(newValue);
                   }
                 },
               ),
@@ -194,6 +214,37 @@ class _PetHistoryState extends State<PetHistory> {
         ],
       ),
     );
+  }
+
+  void changeSterilize(String value) {
+    setState(() {
+      selectedSterilizationStatus = value;
+    });
+
+    final isSterilized = value == 'Esterilizado';
+    _storageService.setPetSterilized(widget.petId, isSterilized);
+
+    print("VALOR DE: $isSterilized");
+
+    // Actualizar el valor del currentPet
+    if (currentPet != null) {
+      currentPet = Pet(
+        id: currentPet!.id,
+        name: currentPet!.name,
+        breed: currentPet!.breed,
+        age: currentPet!.age,
+        weight: currentPet!.weight,
+        isSterilized: isSterilized,
+        type: currentPet!.type,
+        gender: currentPet!.gender,
+        timeUnit: currentPet!.timeUnit,
+        userId: currentPet!.userId,    // Actualizar el estado de esterilización
+        // Agregar otros campos que tenga tu clase Pet
+      );
+    }
+
+    // Debug opcional
+    print('🔁 Cambio de esterilización: $value');
   }
 
   Widget _buildHistoryList() {
@@ -231,6 +282,7 @@ class _PetHistoryState extends State<PetHistory> {
           return _buildTimelineItem(
             checkup: checkup,
             isLast: isLast,
+            petId: checkup.petId,
           );
         },
       ),
@@ -240,6 +292,7 @@ class _PetHistoryState extends State<PetHistory> {
   Widget _buildTimelineItem({
     required Checkup checkup,
     required bool isLast,
+    required int petId, // Agregado el petId como parámetro requerido
   }) {
     final formattedDate = _formatDate(checkup.date);
     final backgroundColor = _getBackgroundColorForType(checkup.title);
@@ -272,45 +325,72 @@ class _PetHistoryState extends State<PetHistory> {
             ],
           ),
           const SizedBox(width: 16),
-          // Content
+          // Content - Wrapped with GestureDetector to make it tappable
           Expanded(
-            child: Container(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 50),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title and date row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          checkup.title,
-                          style: const TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        formattedDate,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  // Description
-                  Text(
-                    checkup.description,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
+            child: GestureDetector(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CheckupDetailsScreen(
+                      checkup: checkup,
+                      petId: petId,
                     ),
                   ),
-                ],
+                );
+
+                // Si el resultado fue exitoso, recargar los datos
+                if (result == true) {
+                  _loadData();
+                }
+              },
+              child: Container(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 50),
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title and date row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            checkup.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 30),
+                        Text(
+                          formattedDate,
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Description
+                    Text(
+                      checkup.description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -521,7 +601,7 @@ class _PetHistoryState extends State<PetHistory> {
     } else if (titleLower.contains('desparasit')) {
       return Colors.teal;
     } else {
-      return Colors.grey;
+      return Colors.redAccent;
     }
   }
 }

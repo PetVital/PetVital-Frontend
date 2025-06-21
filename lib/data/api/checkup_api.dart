@@ -9,6 +9,7 @@ class CheckupApi {
   final localStorageService = LocalStorageService();
 
   Future<bool> addCheckup(Checkup checkup) async {
+    print("EJECUNTANDO EL AGREGARRRRRRRR");
     try {
       final body = checkup.toJson();
 
@@ -33,7 +34,9 @@ class CheckupApi {
     }
   }
 
-  Future<bool> updatePet(Checkup checkup) async {
+  Future<bool> updateCheckup(Checkup checkup) async {
+
+    print("EJECUNTANDO EL UPDATEEEEEEEEEEEEE");
     final int checkupId = checkup.id;
 
     final body = {

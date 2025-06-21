@@ -14,7 +14,7 @@ class CheckupRepositoryImpl implements CheckupRepository {
 
   @override
   Future<bool> updateCheckup(Checkup checkup) async {
-    return await checkupApi.addCheckup(checkup);
+    return await checkupApi.updateCheckup(checkup);
   }
 
   @override

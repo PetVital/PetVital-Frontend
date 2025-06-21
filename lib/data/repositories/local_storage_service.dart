@@ -61,7 +61,8 @@ class LocalStorageService {
             age INTEGER,
             timeUnit TEXT,
             weight REAL,
-            userId INTEGER
+            userId INTEGER,
+            isSterilized INTEGER
           )
         ''');
 
@@ -218,6 +219,33 @@ class LocalStorageService {
       where: 'id = ?',
       whereArgs: [pet.id],
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<bool?> isPetSterilized(int petId) async {
+    final db = await database;
+    final result = await db.query(
+      'Pets',
+      columns: ['isSterilized'],
+      where: 'id = ?',
+      whereArgs: [petId],
+      limit: 1,
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['isSterilized'] == 1;
+    } else {
+      return null; // No encontrada
+    }
+  }
+
+  Future<void> setPetSterilized(int petId, bool value) async {
+    final db = await database;
+    await db.update(
+      'Pets',
+      {'isSterilized': value ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [petId],
     );
   }
 

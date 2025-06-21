@@ -73,7 +73,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
       age: int.parse(_ageController.text.trim()),
       timeUnit: _selectedTime!,
       weight: double.parse(_weightController.text.trim()),
-      userId: userId
+      userId: userId,
+      isSterilized: false,
     );
 
     try {

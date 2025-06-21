@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../application/add_checkup_use_case.dart';
 import '../../../application/delete_checkup_use_case.dart';
 import '../../../application/update_checkup_use_case.dart';
 import '../../../domain/entities/checkup.dart';
@@ -73,7 +74,69 @@ class _CheckupFormScreenState extends State<CheckupFormScreen> {
     }
   }
 
+  Future<void> _addCheckup() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final addCheckupUseCase = getIt<AddCheckupUseCase>();
+
+      final newCheckup = Checkup(
+        id: 0, // Usually handled by the backend/database
+        petId: widget.petId,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        date: _selectedDate!.toIso8601String().split('T')[0], // Format: YYYY-MM-DD
+      );
+
+      final success = await addCheckupUseCase.addcheckup(newCheckup);
+
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Revisión médica agregada exitosamente'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop(true); // Return true to indicate success
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error al agregar la revisión médica'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error adding checkup: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al agregar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _updateCheckup() async {
+    print("PULSE EDITARRRR");
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -121,78 +184,6 @@ class _CheckupFormScreenState extends State<CheckupFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al actualizar: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _deleteCheckup() async {
-    // Show confirmation dialog
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirmar eliminación'),
-          content: const Text('¿Estás seguro de que quieres eliminar esta revision? Esta acción no se puede deshacer.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final deleteCheckupUseCase = getIt<DeleteCheckupUseCase>();
-      final success = await deleteCheckupUseCase.deleteCheckup(widget.checkup!.id);
-
-      if (success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Revision eliminada exitosamente'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.of(context).pop(true); // Return true to indicate success
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error al eliminar la revision'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error deleting checkup: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al eliminar: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -403,49 +394,14 @@ class _CheckupFormScreenState extends State<CheckupFormScreen> {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                // Delete button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : _deleteCheckup,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red[600],
-                      side: BorderSide(color: Colors.red[600]!),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.red[600],
-                        strokeWidth: 2,
-                      ),
-                    )
-                        : const Text(
-                      'Eliminar',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
+                )
               ] else ...[
                 // Create button (for new checkups)
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : () {
-                      // TODO: Implement create checkup functionality
-                      // You'll need to add CreateCheckupUseCase
-                    },
+                    onPressed: _isLoading ? null : _addCheckup,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue[600],
                       foregroundColor: Colors.white,

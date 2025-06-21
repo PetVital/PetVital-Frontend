@@ -89,6 +89,7 @@ class _PetEditState extends State<PetEdit> {
       timeUnit: _selectedTime!,
       weight: double.parse(_weightController.text.trim()),
       userId: widget.pet.userId,
+      isSterilized: widget.pet.isSterilized
     );
 
     try {
