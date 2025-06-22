@@ -36,6 +36,19 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void detectLogin() async{
+    final currentUser = await localStorageService.getCurrentUser();
+    if (currentUser != null) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.main,
+            (route) => false, // Esto elimina todas las rutas anteriores
+      );
+    }else{
+      _loadSavedCredentials();
+    }
+  }
+
   void _loadSavedCredentials() async {
     print("Cargando credenciales");
     final credentials = await localStorageService.getCredentials();
@@ -74,6 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (loginResponse!=null) {
+
+          await localStorageService.clearMessages();
 
           if (_rememberMe) {
             await localStorageService.saveCredentials(

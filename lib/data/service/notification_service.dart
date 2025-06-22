@@ -1,85 +1,111 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+// 🔥 Importar tu LocalStorageService en lugar de SharedPreferences
+import '../repositories/local_storage_service.dart';
 
 class NotificationService {
   static const String _oneSignalAppId = "64b1091b-6756-4760-97f2-b280b458dc49";
   static const String _oneSignalApiKey = "os_v2_app_msyqsg3hkzdwbf7swkaliwg4jej5aurgoufet657tmqzgfc5dmiulayczqua5h4xod7dsdkmvmfjeplzryletou267zshapkkn7dsdy";
 
-  /// Programa una notificación basada en el recordatorio de la cita
+  static final LocalStorageService _storage = LocalStorageService();
+
+  /// Configura OneSignal para un nuevo usuario
+  static Future<void> setupForUser(String userId) async {
+    try {
+      // 🔥 Obtener usuario actual desde la base de datos
+      final currentUser = await _storage.getCurrentUser();
+      final previousUserId = currentUser?.id;
+
+      // Si hay un usuario anterior diferente, limpiar sus notificaciones
+      if (previousUserId != null && previousUserId != userId) {
+        await cancelAllScheduledNotifications();
+        print('Notificaciones del usuario anterior ($previousUserId) canceladas');
+      }
+
+      // El usuario ya debe estar guardado en la base de datos antes de llamar este método
+      // Si no está guardado, guardar el ID temporalmente no es necesario porque
+      // tu LocalStorageService ya maneja el usuario actual
+
+      // Configurar tags en OneSignal para identificar al usuario
+      OneSignal.User.addTagWithKey('user_id', userId);
+
+      print('OneSignal configurado para usuario: $userId');
+    } catch (e) {
+      print('Error al configurar OneSignal para usuario: $e');
+    }
+  }
+
+  /// Limpia la sesión y cancela todas las notificaciones
+  static Future<void> clearSession() async {
+    try {
+      // Cancelar todas las notificaciones programadas del usuario actual
+      await cancelAllScheduledNotifications();
+
+      // 🔥 Limpiar datos usando tu LocalStorageService
+      // Esto limpia la tabla User y otras tablas según tu lógica de negocio
+      await _storage.clearAllTablesExceptUserCredentials();
+
+      // Remover tags de OneSignal
+      OneSignal.User.removeTag('user_id');
+
+      print('Sesión limpiada y notificaciones canceladas');
+    } catch (e) {
+      print('Error al limpiar sesión: $e');
+    }
+  }
+
+  /// Programa una notificación y la guarda localmente para poder cancelarla
   static Future<bool> scheduleAppointmentNotification({
-    required String appointmentDate, // formato: yyyy-mm-dd
-    required String appointmentTime, // formato: HH:mm:ss
-    required String reminderType,    // '30 minutos antes', '1 hora antes', etc.
+    required String appointmentDate,
+    required String appointmentTime,
+    required String reminderType,
     required String title,
     required String message,
     required String petName,
     required String appointmentType,
+    required String appointmentId,
     Map<String, dynamic>? additionalData,
   }) async {
     try {
-      // Si no hay recordatorio, no programar notificación
       if (reminderType == 'Sin recordatorio') {
         print('Sin recordatorio seleccionado, no se programa notificación');
         return true;
       }
 
-      // Obtener el player ID del dispositivo actual
       String? playerId = OneSignal.User.pushSubscription.id;
-
       if (playerId == null) {
         print('No se pudo obtener el player ID');
         return false;
       }
 
-      // DEBUG: Mostrar los valores recibidos
-      print('=== DEBUG PARÁMETROS RECIBIDOS ===');
-      print('appointmentDate recibido: $appointmentDate');
-      print('appointmentTime recibido: $appointmentTime');
-      print('reminderType recibido: $reminderType');
-
-      // Construir DateTime de la cita EN ZONA HORARIA DE PERÚ
-      final appointmentDateTime = _buildAppointmentDateTimeInPeru(appointmentDate, appointmentTime);
-
-      print('DateTime de la cita construido: ${appointmentDateTime.toString()}');
-
-      // Calcular la fecha de notificación basada en el recordatorio
-      final notificationDateTime = _calculateNotificationDateTime(appointmentDateTime, reminderType);
-
-      print('DateTime de notificación calculado: ${notificationDateTime.toString()}');
-
-      // Verificar que la fecha de notificación sea futura (comparar en hora local)
-      final nowInPeru = DateTime.now(); // Hora local del dispositivo
-      if (notificationDateTime.isBefore(nowInPeru)) {
-        print('La fecha de notificación es en el pasado, no se programa');
-        print('Notificación programada para: ${notificationDateTime.toString()}');
-        print('Hora actual: ${nowInPeru.toString()}');
+      // 🔥 Verificar que hay un usuario activo usando LocalStorageService
+      final currentUser = await _storage.getCurrentUser();
+      if (currentUser == null) {
+        print('No hay usuario activo, no se programa notificación');
         return false;
       }
 
-      // IMPORTANTE: Ajustar para zona horaria de Perú (UTC-5)
-      // Como estamos en Perú (UTC-5), necesitamos SUMAR 5 horas para que OneSignal
-      // interprete correctamente la hora local como UTC
+      final appointmentDateTime = _buildAppointmentDateTimeInPeru(appointmentDate, appointmentTime);
+      final notificationDateTime = _calculateNotificationDateTime(appointmentDateTime, reminderType);
+
+      if (notificationDateTime.isBefore(DateTime.now())) {
+        print('La fecha de notificación es en el pasado, no se programa');
+        return false;
+      }
+
       final notificationDateTimeUTC = notificationDateTime.add(const Duration(hours: 5));
 
-      print('=== DEBUG ZONA HORARIA ===');
-      print('Cita programada (hora local): ${appointmentDateTime.toString()}');
-      print('Notificación programada (hora local): ${notificationDateTime.toString()}');
-      print('Notificación programada (UTC para OneSignal): ${notificationDateTimeUTC.toIso8601String()}');
-      print('Hora actual (local): ${nowInPeru.toString()}');
-      print('========================');
-
-      // Crear el payload para la API de OneSignal
       Map<String, dynamic> payload = {
         'app_id': _oneSignalAppId,
         'include_player_ids': [playerId],
         'headings': {
-          'en': title,  // Inglés requerido
-          'es': title   // Español adicional
+          'en': title,
+          'es': title
         },
         'contents': {
-          'en': message,  // Inglés requerido
-          'es': message   // Español adicional
+          'en': message,
+          'es': message
         },
         'send_after': notificationDateTimeUTC.toIso8601String(),
         'data': {
@@ -88,11 +114,12 @@ class NotificationService {
           'appointment_type': appointmentType,
           'appointment_date': appointmentDate,
           'appointment_time': appointmentTime,
+          'appointment_id': appointmentId,
+          'user_id': currentUser.id,
           ...?additionalData,
         },
       };
 
-      // Enviar la notificación programada
       final response = await http.post(
         Uri.parse('https://onesignal.com/api/v1/notifications'),
         headers: {
@@ -103,8 +130,22 @@ class NotificationService {
       );
 
       if (response.statusCode == 200) {
-        print('Notificación programada exitosamente');
-        print('Respuesta: ${response.body}');
+        final responseData = jsonDecode(response.body);
+        final notificationId = responseData['id'];
+
+        // 🔥 Guardar la notificación programada usando LocalStorageService
+        await _storage.saveScheduledNotification(
+          notificationId: notificationId,
+          appointmentId: appointmentId,
+          userId: currentUser.id,
+          scheduledDate: notificationDateTime.toIso8601String(),
+          appointmentDate: appointmentDate,
+          appointmentTime: appointmentTime,
+          petName: petName,
+          appointmentType: appointmentType,
+        );
+
+        print('Notificación programada exitosamente: $notificationId');
         return true;
       } else {
         print('Error al programar notificación: ${response.statusCode}');
@@ -117,84 +158,134 @@ class NotificationService {
     }
   }
 
-  /// Construye un DateTime en zona horaria de Perú (UTC-5)
+  /// Cancela una notificación específica
+  static Future<bool> cancelAppointmentNotification(String appointmentId) async {
+    try {
+      // 🔥 Buscar la notificación en la base de datos
+      final notification = await _storage.getScheduledNotificationByAppointment(appointmentId);
+
+      if (notification == null) {
+        print('No se encontró notificación para la cita: $appointmentId');
+        return false;
+      }
+
+      final notificationId = notification['notification_id'] as String;
+
+      // Cancelar en OneSignal
+      final response = await http.delete(
+        Uri.parse('https://onesignal.com/api/v1/notifications/$notificationId?app_id=$_oneSignalAppId'),
+        headers: {
+          'Authorization': 'Basic $_oneSignalApiKey',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // 🔥 Remover de la base de datos local
+        final deleted = await _storage.deleteScheduledNotificationByAppointment(appointmentId);
+
+        if (deleted) {
+          print('Notificación cancelada exitosamente: $notificationId');
+          return true;
+        } else {
+          print('Notificación cancelada en OneSignal pero no se pudo eliminar de la DB local');
+          return true; // Aún consideramos exitoso porque se canceló en OneSignal
+        }
+      } else {
+        print('Error al cancelar notificación: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('Error al cancelar notificación: $e');
+      return false;
+    }
+  }
+
+  /// Cancela todas las notificaciones programadas del usuario actual
+  static Future<void> cancelAllScheduledNotifications() async {
+    try {
+      // 🔥 Obtener usuario actual
+      final currentUser = await _storage.getCurrentUser();
+      if (currentUser == null) {
+        print('No hay usuario activo');
+        return;
+      }
+
+      // 🔥 Obtener todas las notificaciones del usuario actual
+      final notifications = await _storage.getScheduledNotificationsByUser(currentUser.id);
+
+      // Cancelar cada notificación en OneSignal
+      for (final notification in notifications) {
+        final notificationId = notification['notification_id'] as String;
+
+        try {
+          await http.delete(
+            Uri.parse('https://onesignal.com/api/v1/notifications/$notificationId?app_id=$_oneSignalAppId'),
+            headers: {
+              'Authorization': 'Basic $_oneSignalApiKey',
+            },
+          );
+          print('Notificación cancelada: $notificationId');
+        } catch (e) {
+          print('Error al cancelar notificación $notificationId: $e');
+        }
+      }
+
+      // 🔥 Limpiar todas las notificaciones del usuario de la base de datos
+      await _storage.deleteAllScheduledNotificationsByUser(currentUser.id);
+
+      print('Todas las notificaciones del usuario ${currentUser.id} han sido canceladas');
+
+    } catch (e) {
+      print('Error al cancelar todas las notificaciones: $e');
+    }
+  }
+
+  /// Obtiene las notificaciones programadas del usuario actual
+  static Future<List<Map<String, dynamic>>> getScheduledNotifications() async {
+    try {
+      // 🔥 Obtener usuario actual
+      final currentUser = await _storage.getCurrentUser();
+      if (currentUser == null) {
+        print('No hay usuario activo');
+        return [];
+      }
+
+      // 🔥 Obtener notificaciones del usuario actual
+      return await _storage.getScheduledNotificationsByUser(currentUser.id);
+    } catch (e) {
+      print('Error al obtener notificaciones programadas: $e');
+      return [];
+    }
+  }
+
+  // === MÉTODOS AUXILIARES (sin cambios) ===
   static DateTime _buildAppointmentDateTimeInPeru(String date, String time) {
-    // date: "2024-12-25", time: "14:30:00"
-    print('=== DEBUG BUILD DATETIME ===');
-    print('Fecha string: $date');
-    print('Hora string: $time');
-
     final dateParts = date.split('-');
     final timeParts = time.split(':');
 
-    print('Año: ${dateParts[0]}, Mes: ${dateParts[1]}, Día: ${dateParts[2]}');
-    print('Hora: ${timeParts[0]}, Minuto: ${timeParts[1]}, Segundo: ${timeParts[2]}');
-
-    // Crear DateTime en hora local (asumiendo que el dispositivo está en Perú)
-    final localDateTime = DateTime(
-      int.parse(dateParts[0]), // año
-      int.parse(dateParts[1]), // mes
-      int.parse(dateParts[2]), // día
-      int.parse(timeParts[0]), // hora
-      int.parse(timeParts[1]), // minuto
-      int.parse(timeParts[2]), // segundo
+    return DateTime(
+      int.parse(dateParts[0]),
+      int.parse(dateParts[1]),
+      int.parse(dateParts[2]),
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+      int.parse(timeParts[2]),
     );
-
-    print('DateTime final construido: ${localDateTime.toString()}');
-    print('===========================');
-
-    return localDateTime;
   }
 
-  /// Método alternativo si necesitas mayor control sobre la zona horaria
-  static DateTime _buildAppointmentDateTimeInPeruExplicit(String date, String time) {
-    // date: "2024-12-25", time: "14:30:00"
-    final dateParts = date.split('-');
-    final timeParts = time.split(':');
-
-    // Crear DateTime UTC y luego ajustar a Perú (UTC-5)
-    final utcDateTime = DateTime.utc(
-      int.parse(dateParts[0]), // año
-      int.parse(dateParts[1]), // mes
-      int.parse(dateParts[2]), // día
-      int.parse(timeParts[0]), // hora
-      int.parse(timeParts[1]), // minuto
-      int.parse(timeParts[2]), // segundo
-    );
-
-    // Ajustar a hora de Perú (UTC-5 significa restar 5 horas de UTC)
-    return utcDateTime.subtract(const Duration(hours: 5));
-  }
-
-  /// Calcula cuándo enviar la notificación basado en el tipo de recordatorio
   static DateTime _calculateNotificationDateTime(DateTime appointmentDateTime, String reminderType) {
-    print('=== DEBUG CÁLCULO NOTIFICACIÓN ===');
-    print('Fecha de cita: ${appointmentDateTime.toString()}');
-    print('Tipo de recordatorio: $reminderType');
-
-    DateTime result;
-
     switch (reminderType) {
       case '30 minutos antes':
-        result = appointmentDateTime.subtract(const Duration(minutes: 30));
-        break;
+        return appointmentDateTime.subtract(const Duration(minutes: 30));
       case '1 hora antes':
-        result = appointmentDateTime.subtract(const Duration(hours: 1));
-        break;
+        return appointmentDateTime.subtract(const Duration(hours: 1));
       case '1 día antes':
-        result = appointmentDateTime.subtract(const Duration(days: 1));
-        break;
+        return appointmentDateTime.subtract(const Duration(days: 1));
       default:
-        result = appointmentDateTime.subtract(const Duration(minutes: 30)); // default
+        return appointmentDateTime.subtract(const Duration(minutes: 30));
     }
-
-    print('Fecha de notificación calculada: ${result.toString()}');
-    print('===============================');
-
-    return result;
   }
 
-  /// Genera el mensaje personalizado para la notificación
   static String generateNotificationMessage({
     required String petName,
     required String appointmentType,
@@ -218,6 +309,7 @@ class NotificationService {
     return '$petName tiene cita de $appointmentType $timeText. ¡No lo olvides!';
   }
 
+  /// Envía una notificación inmediata
   static Future<void> sendImmediateNotification({
     required String title,
     required String message,
@@ -225,30 +317,20 @@ class NotificationService {
   }) async {
     try {
       String? playerId = OneSignal.User.pushSubscription.id;
-
-      if (playerId == null) {
-        print('No se pudo obtener el player ID');
-        return;
-      }
+      if (playerId == null) return;
 
       Map<String, dynamic> payload = {
         'app_id': _oneSignalAppId,
         'include_player_ids': [playerId],
-        'headings': {
-          'en': title,  // Inglés requerido
-          'es': title   // Español adicional
-        },
-        'contents': {
-          'en': message,  // Inglés requerido
-          'es': message   // Español adicional
-        },
+        'headings': {'en': title, 'es': title},
+        'contents': {'en': message, 'es': message},
       };
 
       if (additionalData != null) {
         payload['data'] = additionalData;
       }
 
-      final response = await http.post(
+      await http.post(
         Uri.parse('https://onesignal.com/api/v1/notifications'),
         headers: {
           'Content-Type': 'application/json',
@@ -256,75 +338,8 @@ class NotificationService {
         },
         body: jsonEncode(payload),
       );
-
-      if (response.statusCode == 200) {
-        print('Notificación enviada exitosamente');
-      } else {
-        print('Error al enviar notificación: ${response.statusCode}');
-      }
     } catch (e) {
       print('Error al enviar notificación: $e');
-    }
-  }
-
-  // Método mejorado con manejo correcto de zona horaria
-  static Future<void> scheduleNotification({
-    required DateTime dateTime,
-    required String title,
-    required String message,
-    Map<String, dynamic>? additionalData,
-  }) async {
-    try {
-      String? playerId = OneSignal.User.pushSubscription.id;
-
-      if (playerId == null) {
-        print('No se pudo obtener el player ID');
-        return;
-      }
-
-      // Asegurar que enviamos la fecha correcta a OneSignal
-      // Para Perú (UTC-5), sumamos 5 horas para compensar la diferencia
-      final dateTimeUTC = dateTime.add(const Duration(hours: 5));
-
-      print('=== DEBUG SCHEDULE ===');
-      print('DateTime local: ${dateTime.toString()}');
-      print('DateTime ajustado para OneSignal: ${dateTimeUTC.toIso8601String()}');
-      print('=======================');
-
-      Map<String, dynamic> payload = {
-        'app_id': _oneSignalAppId,
-        'include_player_ids': [playerId],
-        'headings': {
-          'en': title,  // Inglés requerido
-          'es': title   // Español adicional
-        },
-        'contents': {
-          'en': message,  // Inglés requerido
-          'es': message   // Español adicional
-        },
-        'send_after': dateTimeUTC.toIso8601String(),
-      };
-
-      if (additionalData != null) {
-        payload['data'] = additionalData;
-      }
-
-      final response = await http.post(
-        Uri.parse('https://onesignal.com/api/v1/notifications'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic $_oneSignalApiKey',
-        },
-        body: jsonEncode(payload),
-      );
-
-      if (response.statusCode == 200) {
-        print('Notificación programada exitosamente');
-      } else {
-        print('Error al programar notificación: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error al programar notificación: $e');
     }
   }
 }

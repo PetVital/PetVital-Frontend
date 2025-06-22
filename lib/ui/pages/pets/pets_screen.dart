@@ -1,6 +1,7 @@
 // lib/ui/pages/pets/pets_screen.dart
 import 'package:flutter/material.dart';
 import '../../../data/repositories/local_storage_service.dart';
+import '../../../data/service/notification_service.dart';
 import '../../../domain/entities/pet.dart';
 import '../pet_form_screen.dart';
 import 'pet_history.dart';
@@ -15,9 +16,10 @@ class PetsScreen extends StatefulWidget {
 }
 
 class _PetsScreenState extends State<PetsScreen> {
+
+  final localStorageService = LocalStorageService();
   List<Pet> pets = [];
   bool _isLoading = false;
-  final localStorageService = LocalStorageService();
 
   @override
   void initState() {
@@ -111,7 +113,8 @@ class _PetsScreenState extends State<PetsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: IconButton(
               icon: const Icon(Icons.logout, color: Colors.black),
-              onPressed: () {
+              onPressed: () async {
+                await NotificationService.clearSession();
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/',

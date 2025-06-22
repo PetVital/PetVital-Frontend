@@ -8,7 +8,7 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   AppointmentRepositoryImpl(this.appointmentApi);
 
   @override
-  Future<bool> addAppointment(Appointment appointment) async {
+  Future<Appointment?> addAppointment(Appointment appointment) async {
     return await appointmentApi.addAppointment(appointment);
   }
 

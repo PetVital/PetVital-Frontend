@@ -1,10 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'authentication/login_screen.dart';
 import 'authentication/register_screen.dart';
+import '../../data/repositories/local_storage_service.dart';
+import '../../../core/routes/app_routes.dart';
 
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
+
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
+
+  final localStorageService = LocalStorageService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLoggedUser();
+  }
+
+  void _loadLoggedUser() async {
+    final currentUser = await localStorageService.getCurrentUser();
+    if (currentUser != null) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.main,
+            (route) => false, // Esto elimina todas las rutas anteriores
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,8 +86,8 @@ class WelcomeScreen extends StatelessWidget {
                 width: double.infinity,
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF8C52FF), Color(0xFF00A3FF)], // Degradado púrpura a azul
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8C52FF), Color(0xFF00A3FF)],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
@@ -75,7 +101,7 @@ class WelcomeScreen extends StatelessWidget {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent, // Para que el botón no sobreescriba el gradiente
+                      backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
@@ -86,7 +112,7 @@ class WelcomeScreen extends StatelessWidget {
                       'Iniciar sesión',
                       style: TextStyle(
                         fontSize: 20,
-                        color: Colors.white, // Texto en blanco para contraste
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -124,12 +150,12 @@ class WelcomeScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Texto de términos y condiciones
+              // Términos y condiciones
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
                   text: 'Al continuar, aceptas nuestros\n',
-                  style: const TextStyle(color: Colors.grey,fontSize: 15 ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 15),
                   children: [
                     TextSpan(
                       text: 'Términos de servicio',

@@ -46,12 +46,15 @@ class _HomeScreenState extends State<HomeScreen> {
       // Obtener usuario actual
       final user = await _storageService.getCurrentUser();
 
+      setState(() {
+        currentUser = user;
+      });
+
       final getHomeDataUseCase = getIt<GetHomeDataUseCase>();
       final HomeResponse? homeResponse = await getHomeDataUseCase.getHomeData();
 
       if (homeResponse != null) {
         setState(() {
-          currentUser = user;
           homeData = homeResponse;
           isLoading = false;
         });

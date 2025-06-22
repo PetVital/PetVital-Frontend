@@ -9,7 +9,7 @@ class AppointmentApi {
   final localStorageService = LocalStorageService();
 
   /// Crear una nueva cita
-  Future<bool> addAppointment(Appointment appointment) async {
+  Future<Appointment?> addAppointment(Appointment appointment) async {
     try {
       final body = appointment.toJson();
 
@@ -22,15 +22,16 @@ class AppointmentApi {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return true;
+        final jsonData = jsonDecode(response.body);
+        return Appointment.fromJson(jsonData);
       } else {
-        print('Error al crear cita: ${response.statusCode}');
+        print('Error al obtener la cita: ${response.statusCode}');
         print('Detalle: ${response.body}');
-        return false;
+        return null;
       }
     } catch (e) {
       print('Excepción al crear cita: $e');
-      return false;
+      return null;
     }
   }
 

@@ -6,12 +6,12 @@ class AddAppointmentUseCase {
 
   AddAppointmentUseCase(this.appointmentRepository);
 
-  Future<bool> addAppointment(Appointment appointment) async {
+  Future<Appointment?> addAppointment(Appointment appointment) async {
     try {
-      final bool response = await appointmentRepository.addAppointment(appointment);
-      return response;
+      final Appointment? appointmentResponse = await appointmentRepository.addAppointment(appointment);
+      return appointmentResponse;
     } catch (e) {
-      return false;
+      return null;
     }
   }
 }

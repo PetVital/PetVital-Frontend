@@ -29,7 +29,7 @@ class LocalStorageService {
 
     return await openDatabase(
       join(path, 'pet_vital.db'),
-      version: 1,
+      version: 2, // 🔥 Incrementar versión para agregar nueva tabla
       onCreate: (db, version) async {
         print("Creating database tables...");
 
@@ -75,6 +75,22 @@ class LocalStorageService {
           )
         ''');
 
+        // 🔥 Nueva tabla para notificaciones
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS ScheduledNotifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            notification_id TEXT NOT NULL,
+            appointment_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            scheduled_date TEXT NOT NULL,
+            appointment_date TEXT,
+            appointment_time TEXT,
+            pet_name TEXT,
+            appointment_type TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+          )
+        ''');
+
         print("Database tables created successfully.");
       },
       onOpen: (db) async {
@@ -88,12 +104,21 @@ class LocalStorageService {
   Future<void> deleteDatabaseFile() async {
     final path = join(await getDatabasesPath(), 'pet_vital.db');
     await deleteDatabase(path);
-    print("");
+    print("Database deleted");
   }
 
+  Future<void> clearAllTablesExceptUserCredentials() async {
+    final db = await database;
+    await db.delete('User');
+    await db.delete('Pets');
+    await db.delete('Messages');
+    await db.delete('ScheduledNotifications'); // 🔥 Limpiar notificaciones
+  }
+
+  // === MÉTODOS EXISTENTES (sin cambios) ===
   Future<void> saveCredentials(String email, String password, bool rememberMe) async {
     final db = await database;
-    await db.delete('UserCredentials'); // Clear previous credentials
+    await db.delete('UserCredentials');
     await db.insert('UserCredentials', {
       'email': email,
       'password': password,
@@ -116,13 +141,14 @@ class LocalStorageService {
     await db.delete('UserCredentials');
   }
 
+  Future<void> clearMessages() async {
+    final db = await database;
+    await db.delete('Messages');
+  }
+
   Future saveUser(User user) async {
     final db = await database;
-
-    // Limpiar la tabla antes de insertar un nuevo usuario
     await db.delete('User');
-
-    // Insertar el nuevo usuario
     await db.insert(
       'User',
       {
@@ -131,7 +157,7 @@ class LocalStorageService {
         'last_name': user.lastName,
         'email': user.email,
       },
-      conflictAlgorithm: ConflictAlgorithm.replace, // Reemplaza el registro si ya existe
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
@@ -169,6 +195,16 @@ class LocalStorageService {
     }
   }
 
+  Future<String?> getCurrentUserIdAsString() async {
+    final db = await database;
+    var results = await db.query('User', limit: 1);
+
+    if (results.isNotEmpty) {
+      return results.first['id'] as String?;
+    }
+    return null;
+  }
+
   Future<void> clearUser() async {
     final db = await database;
     await db.delete('User');
@@ -176,15 +212,11 @@ class LocalStorageService {
 
   Future<void> clearAllTables() async {
     final db = await database;
-
-    // Lista de tablas a limpiar
     final List<String> tables = ['Pets', 'Messages'];
-
     for (final table in tables) {
       await db.delete(table);
       print("Tabla $table vaciada.");
     }
-
     print("Todas las tablas han sido vaciadas.");
   }
 
@@ -193,7 +225,6 @@ class LocalStorageService {
     await db.delete('Pets');
   }
 
-  // Reemplaza todos los registros existentes por una nueva lista de mascotas
   Future<void> replacePets(List<Pet> pets) async {
     final db = await database;
     await db.transaction((txn) async {
@@ -204,13 +235,11 @@ class LocalStorageService {
     });
   }
 
-  // Agrega una sola mascota
   Future<void> insertPet(Pet pet) async {
     final db = await database;
     await db.insert('Pets', pet.toDbJson(), conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  // Actualiza una mascota
   Future<void> updatePet(Pet pet) async {
     final db = await database;
     await db.update(
@@ -235,7 +264,7 @@ class LocalStorageService {
     if (result.isNotEmpty) {
       return result.first['isSterilized'] == 1;
     } else {
-      return null; // No encontrada
+      return null;
     }
   }
 
@@ -249,10 +278,8 @@ class LocalStorageService {
     );
   }
 
-  // Obtiene una mascota por su ID
   Future<Pet?> getPetById(int id) async {
     final db = await database;
-
     final List<Map<String, dynamic>> maps = await db.query(
       'Pets',
       where: 'id = ?',
@@ -266,20 +293,17 @@ class LocalStorageService {
     }
   }
 
-  // Elimina una mascota por su ID
   Future<void> deletePet(int id) async {
     final db = await database;
     await db.delete('Pets', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Obtiene todas las mascotas guardadas
   Future<List<Pet>> getAllPets() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('Pets');
     return maps.map((json) => Pet.fromDb(json)).toList();
   }
 
-  // Inserta un solo mensaje
   Future<void> insertMessage(Message message) async {
     final db = await database;
     await db.insert(
@@ -289,7 +313,6 @@ class LocalStorageService {
     );
   }
 
-  // Obtiene todos los mensajes ordenados por timestamp ascendente
   Future<List<Message>> getAllMessages() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -297,5 +320,92 @@ class LocalStorageService {
       orderBy: 'timestamp ASC',
     );
     return maps.map((json) => Message.fromDb(json)).toList();
+  }
+
+  // === 🔥 NUEVOS MÉTODOS PARA NOTIFICACIONES ===
+
+  /// Guarda una notificación programada
+  Future<void> saveScheduledNotification({
+    required String notificationId,
+    required String appointmentId,
+    required String userId,
+    required String scheduledDate,
+    String? appointmentDate,
+    String? appointmentTime,
+    String? petName,
+    String? appointmentType,
+  }) async {
+    final db = await database;
+    await db.insert(
+      'ScheduledNotifications',
+      {
+        'notification_id': notificationId,
+        'appointment_id': appointmentId,
+        'user_id': userId,
+        'scheduled_date': scheduledDate,
+        'appointment_date': appointmentDate,
+        'appointment_time': appointmentTime,
+        'pet_name': petName,
+        'appointment_type': appointmentType,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Obtiene todas las notificaciones programadas del usuario actual
+  Future<List<Map<String, dynamic>>> getScheduledNotificationsByUser(String userId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'ScheduledNotifications',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'scheduled_date ASC',
+    );
+    return maps;
+  }
+
+  /// Obtiene una notificación específica por appointment_id
+  Future<Map<String, dynamic>?> getScheduledNotificationByAppointment(String appointmentId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'ScheduledNotifications',
+      where: 'appointment_id = ?',
+      whereArgs: [appointmentId],
+      limit: 1,
+    );
+    return maps.isNotEmpty ? maps.first : null;
+  }
+
+  /// Elimina una notificación por appointment_id
+  Future<bool> deleteScheduledNotificationByAppointment(String appointmentId) async {
+    final db = await database;
+    final int deletedRows = await db.delete(
+      'ScheduledNotifications',
+      where: 'appointment_id = ?',
+      whereArgs: [appointmentId],
+    );
+    return deletedRows > 0;
+  }
+
+  /// Elimina todas las notificaciones de un usuario específico
+  Future<void> deleteAllScheduledNotificationsByUser(String userId) async {
+    final db = await database;
+    await db.delete(
+      'ScheduledNotifications',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  /// Limpia todas las notificaciones programadas
+  Future<void> clearAllScheduledNotifications() async {
+    final db = await database;
+    await db.delete('ScheduledNotifications');
+  }
+
+  /// Obtiene todas las notificaciones (para debugging)
+  Future<List<Map<String, dynamic>>> getAllScheduledNotifications() async {
+    final db = await database;
+    return await db.query('ScheduledNotifications', orderBy: 'created_at DESC');
   }
 }

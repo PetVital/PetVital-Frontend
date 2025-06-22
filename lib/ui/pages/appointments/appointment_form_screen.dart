@@ -220,9 +220,9 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
 
         // Enviar al backend usando AddAppointmentUseCase
         final addAppointmentUseCase = getIt<AddAppointmentUseCase>();
-        final success = await addAppointmentUseCase.addAppointment(appointment);
+        final appointmentResponse = await addAppointmentUseCase.addAppointment(appointment);
 
-        if (success) {
+        if (appointmentResponse!=null) {
           // ✨ PROGRAMAR NOTIFICACIÓN PUSH CON ONESIGNAL ✨
           try {
             final notificationTitle = 'Recordatorio de ${appointment.type}';
@@ -246,6 +246,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
                 'pet_id': _selectedPet!.id.toString(),
                 'type': 'appointment_reminder',
               },
+              appointmentId: appointmentResponse.id.toString(),
             );
 
             if (notificationSuccess) {
@@ -683,21 +684,6 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              ElevatedButton(
-                onPressed: () {
-                  NotificationService.sendImmediateNotification(
-                    title: 'Notificación Inmediata',
-                    message: 'Esta es una notificación de prueba',
-                    additionalData: {
-                      'route': '/details',
-                    },
-                  );
-                },
-                child: Text("Notificacion de prueba"),
-              )
-              ,
-
               // Botón de guardar
               SizedBox(
                 width: double.infinity,
