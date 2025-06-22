@@ -4,6 +4,7 @@ import '../../../domain/entities/pet.dart';
 import '../../../domain/entities/appointment.dart';
 import '../../../application/get_user_pets_use_case.dart';
 import '../../../application/add_appointment_use_case.dart';
+import '../../../data/service/notification_service.dart';
 import '../../../main.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
 
@@ -221,21 +222,66 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
         final addAppointmentUseCase = getIt<AddAppointmentUseCase>();
         final success = await addAppointmentUseCase.addAppointment(appointment);
 
-        setState(() {
-          _isLoading = false;
-        });
-
         if (success) {
+          // ✨ PROGRAMAR NOTIFICACIÓN PUSH CON ONESIGNAL ✨
+          try {
+            final notificationTitle = 'Recordatorio de ${appointment.type}';
+            final notificationMessage = NotificationService.generateNotificationMessage(
+              petName: _selectedPet!.name,
+              appointmentType: appointment.type,
+              reminderType: appointment.reminder,
+            );
+
+            final notificationSuccess = await NotificationService.scheduleAppointmentNotification(
+              appointmentDate: appointment.date,
+              appointmentTime: appointment.time,
+              reminderType: appointment.reminder,
+              title: notificationTitle,
+              message: notificationMessage,
+              petName: _selectedPet!.name,
+              appointmentType: appointment.type,
+              additionalData: {
+                'route': '/appointment_details', // Ruta a la que navegar al tocar la notificación
+                'appointment_id': appointment.id.toString(),
+                'pet_id': _selectedPet!.id.toString(),
+                'type': 'appointment_reminder',
+              },
+            );
+
+            if (notificationSuccess) {
+              print('✅ Notificación programada correctamente');
+            } else {
+              print('⚠️ Error al programar la notificación, pero la cita se guardó');
+            }
+          } catch (notificationError) {
+            print('❌ Error en notificación: $notificationError');
+            // No bloquear el flujo si falla la notificación
+          }
+
+          setState(() {
+            _isLoading = false;
+          });
+
           // Mostrar mensaje de éxito
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cita guardada exitosamente'),
+            SnackBar(
+              content: Text(
+                  _selectedReminder == 'Sin recordatorio'
+                      ? 'Cita guardada exitosamente'
+                      : 'Cita guardada y recordatorio programado'
+              ),
               backgroundColor: Colors.green,
             ),
           );
+
           // Navegar de vuelta
           Navigator.pop(context, true); // Retornar true para indicar que se guardó exitosamente
+
         } else {
+          setState(() {
+            _isLoading = false;
+          });
+
           // Mostrar mensaje de error
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -261,6 +307,8 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
       }
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -635,6 +683,20 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+
+              ElevatedButton(
+                onPressed: () {
+                  NotificationService.sendImmediateNotification(
+                    title: 'Notificación Inmediata',
+                    message: 'Esta es una notificación de prueba',
+                    additionalData: {
+                      'route': '/details',
+                    },
+                  );
+                },
+                child: Text("Notificacion de prueba"),
+              )
+              ,
 
               // Botón de guardar
               SizedBox(
