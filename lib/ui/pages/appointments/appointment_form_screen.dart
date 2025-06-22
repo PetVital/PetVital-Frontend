@@ -191,6 +191,68 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
     return '${hour.toString().padLeft(2, '0')}:$minute:00';
   }
 
+  DateTime _buildAppointmentDateTime(String date, String time) {
+    final dateParts = date.split('-');
+    final timeParts = time.split(':');
+
+    return DateTime(
+      int.parse(dateParts[0]),
+      int.parse(dateParts[1]),
+      int.parse(dateParts[2]),
+      int.parse(timeParts[0]),
+      int.parse(timeParts[1]),
+      int.parse(timeParts[2]),
+    );
+  }
+
+  DateTime _calculateNotificationDateTime(DateTime appointmentDateTime, String reminderType) {
+    switch (reminderType) {
+      case '30 minutos antes':
+        return appointmentDateTime.subtract(const Duration(minutes: 30));
+      case '1 hora antes':
+        return appointmentDateTime.subtract(const Duration(hours: 1));
+      case '1 día antes':
+        return appointmentDateTime.subtract(const Duration(days: 1));
+      default:
+        return appointmentDateTime.subtract(const Duration(minutes: 30));
+    }
+  }
+
+  bool _isNotificationTimeValid(String date, String time, String reminderType) {
+    // Si no hay recordatorio, siempre es válido
+    if (reminderType == 'Sin recordatorio') {
+      return true;
+    }
+
+    try {
+      // Construir DateTime de la cita
+      final appointmentDateTime = _buildAppointmentDateTime(date, time);
+
+      // Calcular cuando será la notificación
+      final notificationDateTime = _calculateNotificationDateTime(appointmentDateTime, reminderType);
+
+      // Verificar que la notificación sea en el futuro
+      return notificationDateTime.isAfter(DateTime.now());
+    } catch (e) {
+      print('Error al validar tiempo de notificación: $e');
+      return false;
+    }
+  }
+
+// Función para obtener mensaje de error específico
+  String _getNotificationTimeErrorMessage(String reminderType) {
+    switch (reminderType) {
+      case '30 minutos antes':
+        return 'La hora de la cita debe ser al menos 30 minutos después de ahora para poder programar el recordatorio.';
+      case '1 hora antes':
+        return 'La hora de la cita debe ser al menos 1 hora después de ahora para poder programar el recordatorio.';
+      case '1 día antes':
+        return 'La fecha de la cita debe ser al menos 1 día después de hoy para poder programar el recordatorio.';
+      default:
+        return 'No se puede programar el recordatorio para esta fecha y hora.';
+    }
+  }
+
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -205,6 +267,23 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
         // Convertir hora de 12h a 24h format
         final timeText = _timeController.text.trim();
         final formattedTime = _convertTo24Hour(timeText);
+
+        // 🔥 VALIDAR TIEMPO DE NOTIFICACIÓN ANTES DE CONTINUAR
+        if (!_isNotificationTimeValid(formattedDate, formattedTime, _selectedReminder ?? '')) {
+          setState(() {
+            _isLoading = false;
+          });
+
+          // Mostrar mensaje de error específico
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_getNotificationTimeErrorMessage(_selectedReminder ?? '')),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+          return; // Salir sin guardar
+        }
 
         // Construir el objeto Appointment
         final appointment = Appointment(
@@ -222,7 +301,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
         final addAppointmentUseCase = getIt<AddAppointmentUseCase>();
         final appointmentResponse = await addAppointmentUseCase.addAppointment(appointment);
 
-        if (appointmentResponse!=null) {
+        if (appointmentResponse != null) {
           // ✨ PROGRAMAR NOTIFICACIÓN PUSH CON ONESIGNAL ✨
           try {
             final notificationTitle = 'Recordatorio de ${appointment.type}';
@@ -241,7 +320,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
               petName: _selectedPet!.name,
               appointmentType: appointment.type,
               additionalData: {
-                'route': '/appointment_details', // Ruta a la que navegar al tocar la notificación
+                'route': '/appointment_details',
                 'appointment_id': appointment.id.toString(),
                 'pet_id': _selectedPet!.id.toString(),
                 'type': 'appointment_reminder',
@@ -256,7 +335,6 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
             }
           } catch (notificationError) {
             print('❌ Error en notificación: $notificationError');
-            // No bloquear el flujo si falla la notificación
           }
 
           setState(() {
@@ -276,14 +354,13 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
           );
 
           // Navegar de vuelta
-          Navigator.pop(context, true); // Retornar true para indicar que se guardó exitosamente
+          Navigator.pop(context, true);
 
         } else {
           setState(() {
             _isLoading = false;
           });
 
-          // Mostrar mensaje de error
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Error al guardar la cita. Inténtalo de nuevo.'),
@@ -296,7 +373,6 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
           _isLoading = false;
         });
 
-        // Mostrar mensaje de error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
@@ -326,7 +402,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
           'Nueva Cita',
           style: TextStyle(
             color: Colors.black,
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -598,37 +674,6 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Notas
-              const Text(
-                'Notas (opcional)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _notesController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: 'Agrega detalles',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  fillColor: Colors.grey[100],
-                  filled: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
               // Recordatorio
               const Text(
                 'Recordatorio',
@@ -680,6 +725,34 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Notas (opcional)',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _notesController,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Agrega detalles',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  fillColor: Colors.grey[100],
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
                   ),
                 ),
               ),
