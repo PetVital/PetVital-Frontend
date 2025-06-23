@@ -9,6 +9,7 @@ import '../../../main.dart';
 // Importar el transformador que creamos
 import '../../../domain/entities/appointmentTransformer.dart';
 import 'package:intl/intl.dart';
+import '../appointments/appointments_details_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({Key? key}) : super(key: key);
@@ -62,6 +63,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         _calendarAppointmentsUIData = calendarUiData; // TODAS las citas
         _reminderAppointmentsUIData = reminderUiData; // Solo citas futuras
         _isLoading = false;
+        _appointments = appointments;
       });
 
     } catch (e) {
@@ -491,6 +493,14 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
     ];
 
+    final appointmentId = appointment['id'];
+
+    // 🔥 Buscar el objeto Appointment real en la lista _appointments
+    final currentAppointment = _appointments.firstWhere(
+          (app) => app.id == appointmentId,
+      orElse: () => throw Exception('Appointment not found with id: $appointmentId'),
+    );
+
     final appointmentDate = appointment['date'];
     final day = appointmentDate['day'];
     final month = appointmentDate['month'];
@@ -499,7 +509,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -512,53 +521,72 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: appointmentColor.withOpacity(0.1),
-              shape: BoxShape.circle,
+      child: InkWell(
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AppointmentsDetailsScreen(appointment: currentAppointment), // 🔥 Usar el objeto real
             ),
-            child: Icon(
-              appointmentIcon,
-              color: appointmentColor,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  appointment['title'],
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2C3E50),
-                  ),
+          );
+
+          // Si se eliminó la cita (result == true), refresca los datos
+          if (result == true) {
+            await _refreshData();
+          }
+        },
+        borderRadius: BorderRadius.circular(12), // Para que el ripple respete los bordes redondeados
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: appointmentColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$day de ${monthNames[month - 1]} · ${appointment['time']}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                child: Icon(
+                  appointmentIcon,
+                  color: appointmentColor,
+                  size: 24,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Para ${appointment['petName']}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                )
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      appointment['title'],
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$day de ${monthNames[month - 1]} · ${appointment['time']}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Para ${appointment['petName']}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

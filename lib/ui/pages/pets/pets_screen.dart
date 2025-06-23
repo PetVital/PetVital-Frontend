@@ -384,7 +384,7 @@ class _PetsScreenState extends State<PetsScreen> {
                                 color: Colors.blue[600],
                               ),
                               label: Text(
-                                'Historial',
+                                'Historial médico',
                                 style: TextStyle(
                                   color: Colors.blue[600],
                                   fontWeight: FontWeight.w500,

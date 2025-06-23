@@ -321,7 +321,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
               appointmentType: appointment.type,
               additionalData: {
                 'route': '/appointment_details',
-                'appointment_id': appointment.id.toString(),
+                'appointment_id': appointmentResponse.id.toString(),
                 'pet_id': _selectedPet!.id.toString(),
                 'type': 'appointment_reminder',
               },

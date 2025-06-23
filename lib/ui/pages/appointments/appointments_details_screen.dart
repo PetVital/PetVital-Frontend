@@ -4,6 +4,7 @@ import '../../../application/delete_appointment_use_case.dart';
 import '../../../domain/entities/pet.dart';
 import '../../../data/repositories/local_storage_service.dart';
 import '../../../main.dart';
+import '../../../data/service/notification_service.dart';
 
 class AppointmentsDetailsScreen extends StatefulWidget {
   final Appointment appointment;
@@ -96,11 +97,27 @@ class _AppointmentsDetailsScreenState extends State<AppointmentsDetailsScreen> {
   }
 
   Future<void> _deleteAppointment() async {
+    print("APPOINTMENT");
+    print(widget.appointment.id);
     try {
       setState(() {
         _isLoading = true;
       });
 
+      // 🔥 Primero cancelar la notificación
+      final notificationCanceled = await NotificationService.cancelAppointmentNotification(
+          widget.appointment.id.toString()
+      );
+
+      if (!notificationCanceled) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showError('No se pudo cancelar la notificación. La eliminación fue cancelada.');
+        return;
+      }
+
+      // ✅ Si la notificación se canceló correctamente, proceder con el use case
       final deleteAppointmentUseCase = getIt<DeleteAppointmentUseCase>();
       final success = await deleteAppointmentUseCase.deleteAppointment(widget.appointment.id);
 

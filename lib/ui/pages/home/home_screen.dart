@@ -14,6 +14,7 @@ import '../pets/pet_history.dart';
 import '../../../core/routes/app_routes.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'plan_screen.dart';
+import '../pets/pet_history.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -426,14 +427,11 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () {
         switch (title) {
           case "Salud":
-            Navigator.pushNamedAndRemoveUntil(
+            Navigator.push(
               context,
-              AppRoutes.main,
-                  (route) => false,
-              arguments: {
-                'initialIndex': 2,
-                'pet': pet, // 👈 Aquí pasas el objeto Pet completo
-              },
+              MaterialPageRoute(
+                builder: (context) => PetHistory(petId: pet.id), // ← Asegúrate de tener pet.id disponible en este contexto
+              ),
             );
             break;
           case "Citas":

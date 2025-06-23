@@ -145,6 +145,8 @@ class NotificationService {
           appointmentType: appointmentType,
         );
 
+        print("------------------------------GUARDANDO NOTIFICACION $appointmentId--------------------------");
+
         print('Notificación programada exitosamente: $notificationId');
         return true;
       } else {
@@ -160,18 +162,74 @@ class NotificationService {
 
   /// Cancela una notificación específica
   static Future<bool> cancelAppointmentNotification(String appointmentId) async {
+    print("--------------CANCELANDO NOTIFICACION ${appointmentId}-------------------");
     try {
       // 🔥 Buscar la notificación en la base de datos
       final notification = await _storage.getScheduledNotificationByAppointment(appointmentId);
 
       if (notification == null) {
         print('No se encontró notificación para la cita: $appointmentId');
-        return false;
+        // ✅ Si no hay notificación registrada, consideramos que está "cancelada"
+        return true;
       }
 
-      final notificationId = notification['notification_id'] as String;
+      // 🔥 Validar que notification_id no sea null
+      final notificationIdRaw = notification['notification_id'];
+      if (notificationIdRaw == null) {
+        print('notification_id es null para la cita: $appointmentId');
+        // Eliminar el registro corrupto de la DB
+        await _storage.deleteScheduledNotificationByAppointment(appointmentId);
+        return true;
+      }
+      final notificationId = notificationIdRaw as String;
 
-      // Cancelar en OneSignal
+      // 🔥 Validar que scheduled_time no sea null
+      final scheduledTimeRaw = notification['scheduled_time'];
+      if (scheduledTimeRaw == null) {
+        print('scheduled_time es null para la cita: $appointmentId');
+        // Sin fecha programada, intentar cancelar directamente en OneSignal
+        return await _cancelInOneSignal(notificationId, appointmentId);
+      }
+
+      final scheduledTime = scheduledTimeRaw as String;
+
+      // 🔥 Verificar si la notificación ya debería haber sido enviada
+      DateTime scheduledDateTime;
+      try {
+        scheduledDateTime = DateTime.parse(scheduledTime);
+      } catch (e) {
+        print('Error al parsear scheduled_time: $scheduledTime - $e');
+        // Si no se puede parsear la fecha, intentar cancelar directamente
+        return await _cancelInOneSignal(notificationId, appointmentId);
+      }
+
+      final now = DateTime.now();
+
+      if (now.isAfter(scheduledDateTime)) {
+        print('La notificación ya fue enviada para la cita: $appointmentId');
+        // ✅ Eliminar solo de la base de datos local
+        final deleted = await _storage.deleteScheduledNotificationByAppointment(appointmentId);
+        if (deleted) {
+          print('Notificación ya enviada eliminada de la DB local: $notificationId');
+          return true;
+        } else {
+          print('Error al eliminar notificación ya enviada de la DB local');
+          return false;
+        }
+      }
+
+      // 🔥 Si aún no se ha enviado, intentar cancelar en OneSignal
+      return await _cancelInOneSignal(notificationId, appointmentId);
+
+    } catch (e) {
+      print('Error al cancelar notificación: $e');
+      return false;
+    }
+  }
+
+  /// Método auxiliar para cancelar en OneSignal
+  static Future<bool> _cancelInOneSignal(String notificationId, String appointmentId) async {
+    try {
       final response = await http.delete(
         Uri.parse('https://onesignal.com/api/v1/notifications/$notificationId?app_id=$_oneSignalAppId'),
         headers: {
@@ -180,9 +238,8 @@ class NotificationService {
       );
 
       if (response.statusCode == 200) {
-        // 🔥 Remover de la base de datos local
+        // ✅ Notificación cancelada exitosamente en OneSignal
         final deleted = await _storage.deleteScheduledNotificationByAppointment(appointmentId);
-
         if (deleted) {
           print('Notificación cancelada exitosamente: $notificationId');
           return true;
@@ -190,12 +247,28 @@ class NotificationService {
           print('Notificación cancelada en OneSignal pero no se pudo eliminar de la DB local');
           return true; // Aún consideramos exitoso porque se canceló en OneSignal
         }
+      } else if (response.statusCode == 404) {
+        // ✅ La notificación ya no existe en OneSignal (probablemente ya se envió)
+        print('Notificación ya no existe en OneSignal (posiblemente ya enviada): $notificationId');
+        final deleted = await _storage.deleteScheduledNotificationByAppointment(appointmentId);
+        return deleted;
+      } else if (response.statusCode == 400 && response.body.contains("already been sent")) {
+        // ✅ La notificación ya fue enviada, no se puede cancelar
+        print('Notificación ya fue enviada a todos los destinatarios: $notificationId');
+        final deleted = await _storage.deleteScheduledNotificationByAppointment(appointmentId);
+        if (deleted) {
+          print('Registro de notificación ya enviada eliminado de la DB local');
+          return true;
+        } else {
+          print('Error al eliminar registro de notificación ya enviada de la DB local');
+          return true; // Aún consideramos exitoso porque la notificación ya se envió
+        }
       } else {
-        print('Error al cancelar notificación: ${response.statusCode}');
+        print('Error al cancelar notificación: ${response.statusCode} - ${response.body}');
         return false;
       }
     } catch (e) {
-      print('Error al cancelar notificación: $e');
+      print('Error en _cancelInOneSignal: $e');
       return false;
     }
   }
