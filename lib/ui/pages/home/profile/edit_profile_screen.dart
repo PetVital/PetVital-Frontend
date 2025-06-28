@@ -65,7 +65,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, false), // Indicamos que no hubo cambios
         ),
         title: const Text(
           'Editar Perfil',
@@ -127,80 +127,88 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _firstNameController,
-                decoration: InputDecoration(
-                  hintText: 'Ingresa tu nombre',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE53E3E)),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE53E3E)),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
+                keyboardType: TextInputType.name,
+                textCapitalization: TextCapitalization.words,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa tu nombre';
+                    return 'Por favor ingrese su nombre';
+                  } else if (value.trim().length < 2) {
+                    return 'El nombre debe tener al menos 2 caracteres';
+                  } else if (!RegExp(r"^[a-zA-ZÀ-ÿ\s]+$").hasMatch(value)) {
+                    return 'El nombre solo puede contener letras';
                   }
                   return null;
                 },
+                decoration: InputDecoration(
+                  hintText: 'Tu nombre',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  fillColor: Colors.grey[100],
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.red, width: 1),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
+                ),
               ),
-
               const SizedBox(height: 20),
 
-              // Apellido
+              // Campo de apellidos
               const Text(
                 'Apellidos',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w500,
                   color: Colors.black87,
                 ),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _lastNameController,
-                decoration: InputDecoration(
-                  hintText: 'Ingresa tus apellidos',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE53E3E)),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE53E3E)),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
+                keyboardType: TextInputType.name,
+                textCapitalization: TextCapitalization.words,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa tus apellidos';
+                    return 'Por favor ingrese sus apellidos';
+                  } else if (value.trim().length < 2) {
+                    return 'Los apellidos deben tener al menos 2 caracteres';
+                  } else if (!RegExp(r"^[a-zA-ZÀ-ÿ\s]+$").hasMatch(value)) {
+                    return 'Los apellidos solo pueden contener letras';
                   }
                   return null;
                 },
+                decoration: InputDecoration(
+                  hintText: 'Tus apellidos',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  fillColor: Colors.grey[100],
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.red, width: 1),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.red, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
+                ),
               ),
 
               const SizedBox(height: 40),
@@ -267,10 +275,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       try {
         // Crear usuario actualizado
         final updatedUser = User(
-          id: currentUser!.id,
-          email: currentUser!.email,
-          firstName: _firstNameController.text.trim(),
-          lastName: _lastNameController.text.trim()
+            id: currentUser!.id,
+            email: currentUser!.email,
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim()
         );
 
         final success = await editProfileUseCase.editProfile(updatedUser);
@@ -284,7 +292,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 backgroundColor: Color(0xFF4CAF50),
               ),
             );
-            Navigator.pop(context);
+            // Regresamos con true para indicar que hubo cambios
+            Navigator.pop(context, true);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(

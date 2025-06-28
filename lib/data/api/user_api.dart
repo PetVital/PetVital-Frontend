@@ -44,27 +44,28 @@ class UserApi {
   Future<bool> changePassword(String newPassword) async {
     final int userId = await localStorageService.getCurrentUserId();
 
-    final response = await http.put(
-      Uri.parse('$baseUrl/user/change-password/$userId'),
+    final response = await http.post(
+      Uri.parse('$baseUrl/usuarios/$userId/change-password/'),
       body: {
-        'new_password': newPassword,
+        'nueva_contraseña': newPassword,
       },
     );
 
-    return response.statusCode == 200 || response.statusCode == 201;
+    return response.statusCode == 200;
   }
 
 
   Future<bool> editProfile(User user) async {
     final response = await http.put(
-      Uri.parse('$baseUrl/user/update/${user.id}'),
+      Uri.parse('$baseUrl/usuarios/${user.id}/'),
       body: {
-        'first_name': user.firstName,
-        'last_name': user.lastName,
+        'email': user.email,
+        'nombres': user.firstName,
+        'apellidos': user.lastName,
       },
     );
 
-    return response.statusCode == 200 || response.statusCode == 201;
+    return response.statusCode == 200;
   }
 
 

@@ -79,7 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Asegura que los elementos estén alineados a la derecha
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 12),
                     // Nombre
@@ -110,13 +110,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildMenuItem(
               icon: Icons.person_outline,
               title: 'Perfil',
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                // Esperamos el resultado de la navegación
+                final result = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const EditProfileScreen(),
                   ),
                 );
+
+                // Si el resultado es true, significa que hubo cambios
+                if (result == true) {
+                  await _loadData(); // Recargamos los datos del usuario
+                }
               },
             ),
             _buildMenuItem(
