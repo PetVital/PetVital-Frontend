@@ -84,6 +84,7 @@ class _PetsScreenState extends State<PetsScreen> {
     }
   }
 
+
   Map<String, String> singularUnits = {
     'años': 'año',
     'meses': 'mes',
@@ -113,13 +114,8 @@ class _PetsScreenState extends State<PetsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: IconButton(
               icon: const Icon(Icons.logout, color: Colors.black),
-              onPressed: () async {
-                await NotificationService.clearSession();
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/',
-                      (route) => false,
-                );
+              onPressed: () {
+                _showLogoutDialog(context);
               },
             ),
           )
@@ -461,6 +457,60 @@ class _PetsScreenState extends State<PetsScreen> {
           }
         },
       ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: const Text(
+            'Cerrar sesión',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          content: const Text(
+            '¿Estás seguro de que quieres cerrar sesión?',
+            style: TextStyle(color: Colors.black54),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () async{
+                Navigator.of(context).pop();
+                await NotificationService.clearSession();
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/',
+                      (route) => false,
+                );
+              },
+              child: const Text(
+                'Cerrar sesión',
+                style: TextStyle(
+                  color: Color(0xFFE53E3E),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

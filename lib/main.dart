@@ -26,6 +26,8 @@ import 'application/get_appointment_detail_use_case.dart';
 import 'application/delete_appointment_use_case.dart';
 import 'application/add_checkup_use_case.dart';
 import 'application/update_checkup_use_case.dart';
+import 'application/edit_profile_use_case.dart';
+import 'application/change_password_use_case.dart';
 //repository impl
 import 'data/repositories/user_repositoy_impl.dart';
 import 'data/repositories/pet_repository_impl.dart';
@@ -98,6 +100,12 @@ void main() async{
   );
   getIt.registerLazySingleton<LoginUseCase>(() =>
       LoginUseCase(getIt<UserRepository>())
+  );
+  getIt.registerLazySingleton<ChangePasswordUseCase>(() =>
+      ChangePasswordUseCase(getIt<UserRepository>())
+  );
+  getIt.registerLazySingleton<EditProfileUseCase>(() =>
+      EditProfileUseCase(getIt<UserRepository>())
   );
   getIt.registerLazySingleton<AddPetUseCase>(() =>
       AddPetUseCase(getIt<PetRepository>())

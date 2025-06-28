@@ -38,12 +38,6 @@ class _ChatScreenState extends State<ChatScreen> {
       // Intentar cargar mensajes existentes de la BD
       final existingMessages = await localStorageService.getAllMessages();
 
-      if(widget.pet!=null){
-        setState(() {
-          _messageController.text="Quiero hablar de mi mascota ${widget.pet?.name}";
-        });
-      }
-
       if (existingMessages.isNotEmpty) {
         // Si hay mensajes existentes, mostrarlos
         setState(() {
@@ -54,6 +48,13 @@ class _ChatScreenState extends State<ChatScreen> {
       } else {
         // Si no hay mensajes, generar mensaje de bienvenida
         await _generateAndStoreWelcomeMessage();
+      }
+
+      if(widget.pet!=null){
+        setState(() {
+          _messageController.text="Quiero hablar de mi mascota ${widget.pet?.name}";
+        });
+        _sendMessage();
       }
 
       _scrollToBottom();

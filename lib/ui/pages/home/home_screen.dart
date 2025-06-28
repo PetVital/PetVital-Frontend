@@ -15,6 +15,7 @@ import '../../../core/routes/app_routes.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'plan_screen.dart';
 import '../pets/pet_history.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -168,6 +169,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+              // Botón de perfil de usuario
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(), // Cambia por tu pantalla de perfil
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12), // Espacio entre íconos
               // Botón de planes premium con ícono de corona
               GestureDetector(
                 onTap: () {
@@ -195,7 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-
             ],
           ),
         ),
@@ -304,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _buildInfoCard(Icons.favorite, "Salud", Colors.redAccent, pet),
                     _buildInfoCard(Icons.calendar_today, "Citas", Colors.blueAccent, pet),
-                    _buildInfoCard(Icons.pets, "Actividad", Colors.greenAccent, pet),
+                    _buildInfoCard(Icons.pets, "Consultar", Colors.greenAccent, pet),
                   ],
                 ),
               ],
@@ -442,12 +467,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
             break;
-          case "Actividad":
-            Navigator.push(
+          case "Consultar":
+            Navigator.pushNamedAndRemoveUntil(
               context,
-              MaterialPageRoute(
-                builder: (context) => PetHistory(petId: pet.id),
-              ),
+              AppRoutes.main,
+                  (route) => false,
+              arguments: {
+                'initialIndex': 2,
+                'pet': pet, // 👈 Aquí pasas el objeto Pet completo
+              },
             );
             break;
           default:
