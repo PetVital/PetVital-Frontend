@@ -44,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
       errorMessage = null;
     });
 
+    print("HOME CARGADO");
+
     try {
       // Obtener usuario actual
       final user = await _storageService.getCurrentUser();
@@ -171,13 +173,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               // Botón de perfil de usuario
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async{
+                  final result = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ProfileScreen(), // Cambia por tu pantalla de perfil
                     ),
                   );
+                  _loadHomeData();
                 },
                 child: Container(
                   width: 40,
@@ -189,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Icon(
                     Icons.person,
                     color: Colors.white,
-                    size: 20,
+                    size: 28,
                   ),
                 ),
               ),

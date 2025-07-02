@@ -13,7 +13,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   String _searchQuery = '';
 
   // Fecha de inicio (junio 2025)
-  final DateTime startDate = DateTime(2025, 6, 23);
+  final DateTime startDate = DateTime(2025, 6, 1);
 
   List<Map<String, dynamic>> _generateSubscriptions() {
     List<Map<String, dynamic>> subscriptions = [];

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'profile/subscription_screen.dart';
 import 'profile/change_password_screen.dart';
 import 'profile/edit_profile_screen.dart';
+import 'profile/registered_user_screen.dart';
 import '../../../data/repositories/local_storage_service.dart';
 import '../../../domain/entities/user.dart';
 import '../../../data/service/notification_service.dart';
@@ -178,6 +179,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Términos y condiciones generales',
               onTap: () {
                 // Navegar a términos y condiciones
+              },
+            ),
+            _buildMenuItem(
+              icon: Icons.table_chart_outlined,
+              title: 'Registro de usuarios',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RegisteredUserScreen(),
+                  ),
+                );
               },
             ),
             _buildMenuItem(
