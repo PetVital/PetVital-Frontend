@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:excel/excel.dart' hide Border; // Ocultar Border de excel
+import 'package:excel/excel.dart' hide Border;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:open_file/open_file.dart';
 import 'dart:io';
 import '../../../../data/api/common/api_constants.dart';
 
-// Modelo User
+// Modelo User (sin cambios)
 class UserData {
   final int userId;
   final String nombres;
@@ -49,6 +50,9 @@ class _RegisteredUserScreenState extends State<RegisteredUserScreen>
   bool _obscurePassword = true;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+
+  // Variable para guardar la ruta del archivo descargado
+  String? _lastDownloadedFilePath;
 
   @override
   void initState() {
@@ -116,7 +120,7 @@ class _RegisteredUserScreenState extends State<RegisteredUserScreen>
 
       // Agregar datos de usuarios
       for (int i = 0; i < users.length; i++) {
-        int row = i + 1; // Empezar desde la fila 1 (0 es encabezado)
+        int row = i + 1;
         UserData user = users[i];
 
         sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row)).value = IntCellValue(user.userId);
@@ -127,28 +131,24 @@ class _RegisteredUserScreenState extends State<RegisteredUserScreen>
       }
 
       // Ajustar ancho de columnas
-      sheetObject.setColumnWidth(0, 10); // User ID
-      sheetObject.setColumnWidth(1, 20); // Nombres
-      sheetObject.setColumnWidth(2, 20); // Apellidos
-      sheetObject.setColumnWidth(3, 25); // Email
-      sheetObject.setColumnWidth(4, 25); // Fecha de Registro
+      sheetObject.setColumnWidth(0, 10);
+      sheetObject.setColumnWidth(1, 20);
+      sheetObject.setColumnWidth(2, 20);
+      sheetObject.setColumnWidth(3, 25);
+      sheetObject.setColumnWidth(4, 25);
 
       // Obtener directorio de descargas
       Directory? directory;
       if (Platform.isAndroid) {
-        // Solicitar permisos de almacenamiento
         var status = await Permission.manageExternalStorage.status;
         if (!status.isGranted) {
           await Permission.manageExternalStorage.request();
         }
-
-        // Para Android, usar el directorio de descargas
         directory = Directory('/storage/emulated/0/Download');
         if (!await directory.exists()) {
           directory = await getExternalStorageDirectory();
         }
       } else {
-        // Para iOS
         directory = await getApplicationDocumentsDirectory();
       }
 
@@ -162,14 +162,31 @@ class _RegisteredUserScreenState extends State<RegisteredUserScreen>
           File file = File(filePath);
           await file.writeAsBytes(fileBytes);
 
+          // Guardar la ruta del archivo para poder abrirlo después
+          _lastDownloadedFilePath = filePath;
+
           if (mounted) {
-            _showSuccessSnackBar('Archivo guardado exitosamente', filePath);
+            _showSuccessSnackBar('Registro guardado en Descargas');
           }
         }
       }
     } catch (e) {
       if (mounted) {
         _showErrorSnackBar('Error al crear archivo Excel: $e');
+      }
+    }
+  }
+
+  // Método para abrir el archivo descargado
+  Future<void> _openDownloadedFile() async {
+    if (_lastDownloadedFilePath != null) {
+      try {
+        final result = await OpenFile.open(_lastDownloadedFilePath!);
+        if (result.type != ResultType.done) {
+          _showErrorSnackBar('No se pudo abrir el archivo');
+        }
+      } catch (e) {
+        _showErrorSnackBar('Error al abrir el archivo: $e');
       }
     }
   }
@@ -330,15 +347,10 @@ class _RegisteredUserScreenState extends State<RegisteredUserScreen>
 
     try {
       debugPrint('✅ Contraseña correcta. Obteniendo datos de usuarios...');
-
-      // Obtener usuarios de la API
       List<UserData> users = await getUsers();
       debugPrint('✅ ${users.length} usuarios obtenidos');
-
-      // Crear y descargar archivo Excel
       await _createExcelFile(users);
       debugPrint('✅ Archivo Excel creado y guardado');
-
     } catch (e) {
       debugPrint('❌ Error: $e');
       if (mounted) {
@@ -353,7 +365,7 @@ class _RegisteredUserScreenState extends State<RegisteredUserScreen>
     }
   }
 
-  void _showSuccessSnackBar(String message, String filePath) {
+  void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -364,40 +376,28 @@ class _RegisteredUserScreenState extends State<RegisteredUserScreen>
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    message,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Ubicación: $filePath',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade300,
-                    ),
-                  ),
-                ],
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
           ],
         ),
         backgroundColor: Colors.green.shade600,
-        duration: const Duration(seconds: 5),
+        duration: const Duration(seconds: 6),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
         action: SnackBarAction(
-          label: 'OK',
+          label: 'ABRIR',
           textColor: Colors.white,
-          onPressed: () {},
+          onPressed: () {
+            _openDownloadedFile();
+          },
         ),
       ),
     );

@@ -62,37 +62,31 @@ class _PetFormScreenState extends State<PetFormScreen> {
       return;
     }
 
-    final userId = await localStorageService.getCurrentUserId();
-
-    final pet = Pet(
-      id: 0, // no se usa en la creación
-      name: _nameController.text.trim(),
-      type: _selectedPetType,
-      breed: _selectedBreed!,
-      gender: _selectedSex!,
-      age: int.parse(_ageController.text.trim()),
-      timeUnit: _selectedTime!,
-      weight: double.parse(_weightController.text.trim()),
-      userId: userId,
-      isSterilized: false,
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      final userId = await localStorageService.getCurrentUserId();
+
+      final pet = Pet(
+        id: 0, // no se usa en la creación
+        name: _nameController.text.trim(),
+        type: _selectedPetType,
+        breed: _selectedBreed!,
+        gender: _selectedSex!,
+        age: int.parse(_ageController.text.trim()),
+        timeUnit: _selectedTime!,
+        weight: double.parse(_weightController.text.trim()),
+        userId: userId,
+        isSterilized: false,
+      );
 
       final addPetUseCase = getIt<AddPetUseCase>();
       final petResponse = await addPetUseCase.addPet(pet);
 
-      setState(() {
-        _isLoading = false;
-      });
-
       if (petResponse != null) {
-
         await localStorageService.insertPet(petResponse);
-
         _showSuccess("Mascota registrada exitosamente");
 
         if (widget.isFirstTime) {
@@ -109,13 +103,13 @@ class _PetFormScreenState extends State<PetFormScreen> {
       }
 
     } catch (e) {
+      _showError('Error al guardar la mascota: ${e.toString()}');
+    } finally {
       setState(() {
         _isLoading = false;
       });
-      _showError('Error al guardar la mascota: ${e.toString()}');
     }
   }
-
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -135,7 +129,6 @@ class _PetFormScreenState extends State<PetFormScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,7 +141,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
         title: Text(
           widget.isFirstTime ? 'Agrega tu primera mascota' : 'Agrega una mascota',
           style: const TextStyle(
-            fontSize: 26,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
@@ -165,7 +158,6 @@ class _PetFormScreenState extends State<PetFormScreen> {
             }else{
               Navigator.pop(context);
             }
-
           },
         ),
       ),
@@ -668,20 +660,22 @@ class _PetFormScreenState extends State<PetFormScreen> {
 
                 const SizedBox(height: 32),
 
-                // Botón Continuar
+                // Botón Continuar con estado de carga
                 SizedBox(
                   width: double.infinity,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF8C52FF), Color(0xFF00A3FF)],
+                      gradient: LinearGradient(
+                        colors: _isLoading
+                            ? [Colors.grey[400]!, Colors.grey[400]!]
+                            : [const Color(0xFF8C52FF), const Color(0xFF00A3FF)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: ElevatedButton(
-                      onPressed: _submitForm,
+                      onPressed: _isLoading ? null : _submitForm,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
@@ -690,7 +684,16 @@ class _PetFormScreenState extends State<PetFormScreen> {
                           borderRadius: BorderRadius.circular(15),
                         ),
                       ),
-                      child: const Text(
+                      child: _isLoading
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                          : const Text(
                         'Continuar',
                         style: TextStyle(
                           fontSize: 20,
