@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'appointment_form_screen.dart';
 import '../../../domain/entities/appointment.dart';
 import '../../../domain/entities/pet.dart';
@@ -141,6 +142,23 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     return Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
   }
 
+  // Datos de ejemplo para el skeleton
+  List<Map<String, dynamic>> _getSkeletonData() {
+    return List.generate(3, (index) => {
+      'id': 'skeleton-$index',
+      'title': 'Cita médica veterinaria',
+      'time': '10:00 AM',
+      'petName': 'Max',
+      'icon': 'medical_services',
+      'color': '#8158B7',
+      'date': {
+        'day': 15,
+        'month': DateTime.now().month,
+        'year': DateTime.now().year,
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,48 +181,49 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-          ? _buildErrorWidget()
-          : Column(
-        children: [
-          // Calendario
-          Container(
-            color: Colors.white,
-            child: Column(
-              children: [
-                _buildCalendarHeader(),
-                _buildCalendarGrid(),
-              ],
-            ),
-          ),
-          // Lista de próximas citas
-          Expanded(
-            child: Container(
-              color: Colors.grey[50],
+      body: Skeletonizer(
+        enabled: _isLoading,
+        child: _errorMessage != null
+            ? _buildErrorWidget()
+            : Column(
+          children: [
+            // Calendario
+            Container(
+              color: Colors.white,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Próximas citas',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildAppointmentsList(),
-                  ),
+                  _buildCalendarHeader(),
+                  _buildCalendarGrid(),
                 ],
               ),
             ),
-          ),
-        ],
+            // Lista de próximas citas
+            Expanded(
+              child: Container(
+                color: Colors.grey[50],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'Próximas citas',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildAppointmentsList(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,
@@ -268,7 +287,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left, color: Colors.grey),
-            onPressed: () {
+            onPressed: _isLoading ? null : () {
               setState(() {
                 currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
               });
@@ -284,7 +303,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right, color: Colors.grey),
-            onPressed: () {
+            onPressed: _isLoading ? null : () {
               setState(() {
                 currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
               });
@@ -403,16 +422,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
-            onTap: isCurrentMonth ? () {} : null,
+            onTap: isCurrentMonth && !_isLoading ? () {} : null,
             child: Container(
               decoration: BoxDecoration(
-                color: hasAppointment
+                color: _isLoading
+                    ? Colors.grey[300]
+                    : hasAppointment
                     ? appointmentColor
                     : isToday
                     ? Colors.blue.withOpacity(0.1)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
-                border: isToday && !hasAppointment
+                border: isToday && !hasAppointment && !_isLoading
                     ? Border.all(color: Colors.blue, width: 1)
                     : null,
               ),
@@ -420,7 +441,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                 child: Text(
                   day.toString(),
                   style: TextStyle(
-                    color: hasAppointment
+                    color: _isLoading
+                        ? Colors.grey[600]
+                        : hasAppointment
                         ? Colors.white
                         : isCurrentMonth
                         ? isToday
@@ -442,6 +465,21 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   }
 
   Widget _buildAppointmentsList() {
+    if (_isLoading) {
+      // Mostrar skeleton para las citas
+      final skeletonData = _getSkeletonData();
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        itemCount: skeletonData.length,
+        itemBuilder: (context, index) {
+          return _buildAppointmentCard(
+            appointment: skeletonData[index],
+            isForSkeleton: true,
+          );
+        },
+      );
+    }
+
     // AQUÍ USA EL MÉTODO PARA LOS RECORDATORIOS (SOLO CITAS FUTURAS)
     final currentMonthAppointments = getReminderAppointmentsForMonth(currentMonth);
     List<Map<String, dynamic>> allAppointments = [];
@@ -487,6 +525,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Widget _buildAppointmentCard({
     required Map<String, dynamic> appointment,
+    bool isForSkeleton = false,
   }) {
     final monthNames = [
       'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -494,13 +533,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     ];
 
     final appointmentId = appointment['id'];
-
-    // 🔥 Buscar el objeto Appointment real en la lista _appointments
-    final currentAppointment = _appointments.firstWhere(
-          (app) => app.id == appointmentId,
-      orElse: () => throw Exception('Appointment not found with id: $appointmentId'),
-    );
-
     final appointmentDate = appointment['date'];
     final day = appointmentDate['day'];
     final month = appointmentDate['month'];
@@ -522,7 +554,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         ],
       ),
       child: InkWell(
-        onTap: () async {
+        onTap: isForSkeleton ? null : () async {
+          // 🔥 Buscar el objeto Appointment real en la lista _appointments
+          final currentAppointment = _appointments.firstWhere(
+                (app) => app.id == appointmentId,
+            orElse: () => throw Exception('Appointment not found with id: $appointmentId'),
+          );
+
           final result = await Navigator.push(
             context,
             MaterialPageRoute(

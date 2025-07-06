@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../../application/get_pet_appointments_use_case.dart';
 import '../../../domain/entities/appointment.dart';
 import '../../../core/utils/appointment_filter.dart';
@@ -172,17 +173,134 @@ class _PetAppointmentsState extends State<PetAppointments> {
         iconTheme: const IconThemeData(color: Colors.black87),
         elevation: 0,
       ),
-      body: isLoading
-          ? _buildLoadingWidget()
-          : errorMessage != null
-          ? _buildErrorWidget(errorMessage!)
-          : _buildContent(),
+      body: Skeletonizer(
+        enabled: isLoading,
+        child: isLoading
+            ? _buildSkeletonContent()
+            : errorMessage != null
+            ? _buildErrorWidget(errorMessage!)
+            : _buildContent(),
+      ),
     );
   }
 
-  Widget _buildLoadingWidget() {
-    return const Center(
-      child: CircularProgressIndicator(),
+  Widget _buildSkeletonContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Skeleton para sección de Próximas Citas
+          _buildSectionHeader(
+            icon: Icons.schedule,
+            iconColor: Colors.blue[600]!,
+            title: 'Próximos recordatorios',
+          ),
+          const SizedBox(height: 16),
+          _buildSkeletonAppointmentsSection(),
+
+          const SizedBox(height: 32),
+
+          // Skeleton para sección de Historial
+          _buildSectionHeader(
+            icon: Icons.history,
+            iconColor: Colors.grey[600]!,
+            title: 'Historial de citas completadas',
+          ),
+          const SizedBox(height: 16),
+          _buildSkeletonAppointmentsSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonAppointmentsSection() {
+    return Column(
+      children: List.generate(3, (index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _buildSkeletonAppointmentCard(),
+        );
+      }),
+    );
+  }
+
+  Widget _buildSkeletonAppointmentCard() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(
+            color: Colors.grey[300]!,
+            width: 4.0,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.medical_services,
+              color: Colors.grey[400],
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 16,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 14,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  height: 13,
+                  width: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            color: Colors.grey[400],
+            size: 24,
+          ),
+        ],
+      ),
     );
   }
 

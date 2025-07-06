@@ -237,36 +237,6 @@ class _PetEditState extends State<PetEdit> {
 
                 const SizedBox(height: 24),
 
-                // Área para seleccionar foto
-                Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      // Aquí iría la lógica para seleccionar una foto
-                    },
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(60),
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                          width: 1,
-                          style: BorderStyle.solid,
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.camera_alt_outlined,
-                          size: 40,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
                 // Campo nombre de mascota con validación
                 const Text(
                   'Nombre de tu mascota',

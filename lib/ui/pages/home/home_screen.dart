@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../../data/repositories/local_storage_service.dart';
 import '../../../core/utils/date_time_utils.dart';
 import '../../../core/utils/appointment_filter.dart';
@@ -232,12 +233,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPetsCarousel() {
-    if (isLoading) {
-      return _buildPetsLoadingCarousel();
-    }
-
     if (errorMessage != null) {
       return _buildErrorWidget(errorMessage!);
+    }
+
+    if (isLoading) {
+      return _buildPetsSkeletonCarousel();
     }
 
     if (homeData == null || homeData!.pets.isEmpty) {
@@ -343,6 +344,126 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildPetsSkeletonCarousel() {
+    return Skeletonizer(
+      enabled: true,
+      child: SizedBox(
+        height: 220,
+        child: Container(
+          margin: const EdgeInsets.all(10),
+          padding: const EdgeInsets.only(top: 20, bottom: 10, left: 10, right: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 2,
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              Color(0xFF9a5af7).withOpacity(0.8),
+                              Color(0xFF497cf6).withOpacity(0.8),
+                            ],
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.pets,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                      ),
+                      Container(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nombre',
+                            style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Tipo - edad años',
+                            style: TextStyle(
+                              color: Colors.black.withOpacity(0.5),
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      color: Colors.black,
+                      size: 24,
+                    ),
+                  )
+                ],
+              ),
+              const SizedBox(height: 17),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildSkeletonInfoCard(Icons.favorite, "Salud", Colors.redAccent),
+                  _buildSkeletonInfoCard(Icons.calendar_today, "Citas", Colors.blueAccent),
+                  _buildSkeletonInfoCard(Icons.pets, "Consultar", Colors.greenAccent),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonInfoCard(IconData icon, String title, Color color) {
+    return Container(
+      width: 90,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 5),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.black.withOpacity(0.7),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatTimeUnit(String timeUnit, int age) {
     if (age == 1) {
       switch (timeUnit.toLowerCase()) {
@@ -357,46 +478,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     return timeUnit.toLowerCase();
-  }
-
-  Widget _buildPetsLoadingCarousel() {
-    return SizedBox(
-      height: 220,
-      child: Container(
-        margin: const EdgeInsets.all(10),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8158B7)),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Cargando mascotas...',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildNoPetsWidget() {
@@ -510,14 +591,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   Widget _buildRemindersList() {
-    if (isLoading) {
-      return _buildRemindersLoadingList();
-    }
-
     if (errorMessage != null) {
       return _buildErrorWidget(errorMessage!);
+    }
+
+    if (isLoading) {
+      return _buildRemindersSkeletonList();
     }
 
     if (homeData == null || homeData!.appointments.isEmpty) {
@@ -550,73 +630,80 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRemindersLoadingList() {
-    return Column(
-      children: List.generate(3, (index) =>
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.2),
-                      shape: BoxShape.circle,
+  Widget _buildRemindersSkeletonList() {
+    return Skeletonizer(
+      enabled: true,
+      child: Column(
+        children: List.generate(3, (index) =>
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border(
+                    left: BorderSide(
+                      color: Colors.grey.shade300,
+                      width: 4.0,
                     ),
-                    child: const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
-                        ),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.event,
+                        color: Colors.grey.shade400,
+                        size: 24,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Cargando citas...',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                            color: Colors.grey,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Cita médica programada',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: Color(0xFF2C3E50),
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Por favor espera',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
+                          const SizedBox(height: 4),
+                          Text(
+                            'Fecha y hora de la cita',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    Icon(
+                      Icons.chevron_right,
+                      color: Colors.grey[400],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+        ),
       ),
     );
   }
