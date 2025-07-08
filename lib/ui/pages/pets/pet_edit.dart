@@ -1,12 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../widgets/raza_selector.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import '../../../data/repositories/local_storage_service.dart';
+import '../../../data/service/cloudinary_service.dart';
 import '../../../domain/entities/pet.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../application/update_pet_use_case.dart';
 import '../../../application/delete_pet_use_case.dart';
 import '../../../main.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
 
 class PetEdit extends StatefulWidget {
   final Pet pet;
@@ -21,12 +25,19 @@ class PetEdit extends StatefulWidget {
 }
 
 class _PetEditState extends State<PetEdit> {
+  final CloudinaryService _cloudinaryService = CloudinaryService();
   final localStorageService = LocalStorageService();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   final _weightController = TextEditingController();
   bool _isLoading = false;
+
+  // Variables para imagen
+  XFile? _image;
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
+  String? _downloadURL;
 
   String _selectedPetType = 'Perro';
   String? _selectedBreed;
@@ -52,6 +63,8 @@ class _PetEditState extends State<PetEdit> {
     _selectedBreed = widget.pet.breed;
     _selectedSex = widget.pet.gender;
     _selectedTime = widget.pet.timeUnit;
+    // Cargar la imagen existente
+    _downloadURL = widget.pet.imageUrl.isNotEmpty ? widget.pet.imageUrl : null;
   }
 
   @override
@@ -60,6 +73,94 @@ class _PetEditState extends State<PetEdit> {
     _ageController.dispose();
     _weightController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+
+    if (image != null) {
+      // Filtrar por formato válido
+      final validFormats = ['jpg', 'jpeg', 'png'];
+      final String fileExtension = path.extension(image.path).toLowerCase().replaceAll('.', '');
+
+      if (!validFormats.contains(fileExtension)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Formato de imagen no válido. Seleccione una imagen JPG o PNG.',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        setState(() {
+          _image = image;
+          _downloadURL = null; // Reset la URL anterior cuando se selecciona nueva imagen
+        });
+      }
+    }
+  }
+
+  Future<bool> _uploadImage() async {
+    if (_image == null) return false;
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final userId = await localStorageService.getCurrentUserId();
+
+      // Subir imagen a Cloudinary
+      String? imageUrl = await _cloudinaryService.uploadImage(
+          File(_image!.path),
+          'pet_${_nameController.text.trim()}_${userId}'
+      );
+
+      if (imageUrl != null) {
+        setState(() {
+          _downloadURL = imageUrl;
+          _isUploading = false;
+        });
+        return true;
+      } else {
+        setState(() {
+          _isUploading = false;
+          _downloadURL = null;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error al subir la imagen'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
+    } catch (e) {
+      setState(() {
+        _isUploading = false;
+        _downloadURL = null;
+      });
+
+      print('Error al subir imagen: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al subir la imagen: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
   }
 
   void _updatePet() async {
@@ -79,30 +180,37 @@ class _PetEditState extends State<PetEdit> {
       return;
     }
 
-    final updatedPet = Pet(
-      id: widget.pet.id,
-      name: _nameController.text.trim(),
-      type: _selectedPetType,
-      breed: _selectedBreed!,
-      gender: _selectedSex!,
-      age: int.parse(_ageController.text.trim()),
-      timeUnit: _selectedTime!,
-      weight: double.parse(_weightController.text.trim()),
-      userId: widget.pet.userId,
-      isSterilized: widget.pet.isSterilized
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      String imageUrl = widget.pet.imageUrl; // Mantener la imagen existente por defecto
+
+      // Si hay una nueva imagen seleccionada, intenta subirla
+      if (_image != null) {
+        bool uploadSuccess = await _uploadImage();
+        if (uploadSuccess && _downloadURL != null) {
+          imageUrl = _downloadURL!;
+        }
+      }
+
+      final updatedPet = Pet(
+        id: widget.pet.id,
+        name: _nameController.text.trim(),
+        type: _selectedPetType,
+        breed: _selectedBreed!,
+        gender: _selectedSex!,
+        age: int.parse(_ageController.text.trim()),
+        timeUnit: _selectedTime!,
+        weight: double.parse(_weightController.text.trim()),
+        userId: widget.pet.userId,
+        isSterilized: widget.pet.isSterilized,
+        imageUrl: imageUrl,
+      );
 
       final updatePetUseCase = getIt<UpdatePetUseCase>();
       final success = await updatePetUseCase.updatePet(updatedPet);
-
-      setState(() {
-        _isLoading = false;
-      });
 
       if (success) {
         await localStorageService.updatePet(updatedPet);
@@ -113,10 +221,11 @@ class _PetEditState extends State<PetEdit> {
       }
 
     } catch (e) {
+      _showError('Error al actualizar la mascota: ${e.toString()}');
+    } finally {
       setState(() {
         _isLoading = false;
       });
-      _showError('Error al actualizar la mascota: ${e.toString()}');
     }
   }
 
@@ -126,7 +235,7 @@ class _PetEditState extends State<PetEdit> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.white, // Fondo blanco
+          backgroundColor: Colors.white,
           title: const Text('Eliminar mascota'),
           content: Text('¿Estás seguro de que quieres eliminar a ${widget.pet.name}? Esta acción no se puede deshacer.'),
           actions: [
@@ -187,9 +296,9 @@ class _PetEditState extends State<PetEdit> {
       SnackBar(
         content: Text(
           message,
-          style: TextStyle(color: Colors.white), // Letras blancas
+          style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.green, // Fondo verde
+        backgroundColor: Colors.green,
       ),
     );
   }
@@ -232,6 +341,61 @@ class _PetEditState extends State<PetEdit> {
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Sección de imagen
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 55,
+                              backgroundColor: (_image == null && (_downloadURL == null || _downloadURL!.isEmpty))
+                                  ? Colors.grey[200]
+                                  : const Color(0xffF0EFFE),
+                              backgroundImage: _image != null
+                                  ? FileImage(File(_image!.path)) as ImageProvider
+                                  : (_downloadURL != null && _downloadURL!.isNotEmpty
+                                  ? NetworkImage(_downloadURL!)
+                                  : null),
+                              child: (_image == null && (_downloadURL == null || _downloadURL!.isEmpty))
+                                  ? Icon(
+                                Icons.camera_alt_outlined,
+                                size: 60,
+                                color: Colors.grey,
+                              )
+                                  : null,
+                            ),
+                            if (_isUploading)
+                              Positioned.fill(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _image != null ? 'Cambiar foto' : 'Elegir foto',
+                          style: const TextStyle(color: Colors.black54),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -302,7 +466,7 @@ class _PetEditState extends State<PetEdit> {
                           setState(() {
                             _selectedPetType = 'Perro';
                             _selectedBreed = null;
-                            _breedError = null; // Reset breed error
+                            _breedError = null;
                           });
                         },
                         child: Container(
@@ -355,7 +519,7 @@ class _PetEditState extends State<PetEdit> {
                           setState(() {
                             _selectedPetType = 'Gato';
                             _selectedBreed = null;
-                            _breedError = null; // Reset breed error
+                            _breedError = null;
                           });
                         },
                         child: Container(
@@ -433,7 +597,7 @@ class _PetEditState extends State<PetEdit> {
                         onChanged: (value) {
                           setState(() {
                             _selectedBreed = value;
-                            _breedError = null; // Clear error when selection is made
+                            _breedError = null;
                           });
                         },
                       ),
@@ -486,7 +650,7 @@ class _PetEditState extends State<PetEdit> {
                         onChanged: (value) {
                           setState(() {
                             _selectedSex = value;
-                            _sexError = null; // Clear error when selection is made
+                            _sexError = null;
                           });
                         },
                         buttonStyleData: ButtonStyleData(
@@ -612,7 +776,7 @@ class _PetEditState extends State<PetEdit> {
                                   onChanged: (value) {
                                     setState(() {
                                       _selectedTime = value;
-                                      _ageUnitError = null; // Clear error when selection is made
+                                      _ageUnitError = null;
                                     });
                                   },
                                   buttonStyleData: ButtonStyleData(

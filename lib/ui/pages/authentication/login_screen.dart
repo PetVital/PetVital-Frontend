@@ -218,24 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontSize: 16,
                             color: Colors.black87,
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // Aquí puedes navegar a la pantalla de recuperación de contraseña
-                          },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            '¿Olvidaste?',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ),
+                        )
                       ],
                     ),
                     const SizedBox(height: 8),

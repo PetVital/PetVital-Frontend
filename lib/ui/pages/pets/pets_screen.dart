@@ -197,8 +197,16 @@ class _PetsScreenState extends State<PetsScreen> {
                             decoration: BoxDecoration(
                               color: petColor.withOpacity(0.2),
                               shape: BoxShape.circle,
+                              image: pet.imageUrl != null && pet.imageUrl!.isNotEmpty
+                                  ? DecorationImage(
+                                image: NetworkImage(pet.imageUrl!),
+                                fit: BoxFit.cover,
+                              )
+                                  : null,
                             ),
-                            child: Icon(
+                            child: pet.imageUrl != null && pet.imageUrl!.isNotEmpty
+                                ? null
+                                : Icon(
                               petIcon,
                               size: 30,
                               color: petColor,

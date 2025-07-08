@@ -187,10 +187,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
+                    color: currentUser!.imageUrl != null && currentUser!.imageUrl!.isNotEmpty
+                        ? null
+                        : Colors.white.withOpacity(0.2),
+                    image: currentUser?.imageUrl != null && currentUser!.imageUrl!.isNotEmpty
+                        ? DecorationImage(
+                      image: NetworkImage(currentUser!.imageUrl!),
+                      fit: BoxFit.cover,
+                    )
+                        : null,
                   ),
-                  child: const Icon(
+                  child: currentUser!.imageUrl != null && currentUser!.imageUrl!.isNotEmpty
+                      ? null
+                      : const Icon(
                     Icons.person,
                     color: Colors.white,
                     size: 28,
@@ -275,23 +285,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [
-                                Color(0xFF9a5af7).withOpacity(0.8),
-                                Color(0xFF497cf6).withOpacity(0.8),
-                              ],
+                        Padding(
+                          padding: const EdgeInsets.only(left: 10, right: 5), // 👈 Agrega padding izquierdo de 10px
+                          child: Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: pet.imageUrl != null && pet.imageUrl!.isNotEmpty
+                                  ? null
+                                  : LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  Color(0xFF9a5af7).withOpacity(0.8),
+                                  Color(0xFF497cf6).withOpacity(0.8),
+                                ],
+                              ),
+                              image: pet.imageUrl != null && pet.imageUrl!.isNotEmpty
+                                  ? DecorationImage(
+                                image: NetworkImage(pet.imageUrl!),
+                                fit: BoxFit.cover,
+                              )
+                                  : null,
                             ),
-                          ),
-                          child: const Icon(
-                            Icons.pets,
-                            color: Colors.white,
-                            size: 26,
+                            child: pet.imageUrl != null && pet.imageUrl!.isNotEmpty
+                                ? null
+                                : const Icon(
+                              Icons.pets,
+                              color: Colors.white,
+                              size: 26,
+                            ),
                           ),
                         ),
                         Container(width: 10),

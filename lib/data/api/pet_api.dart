@@ -19,7 +19,8 @@ class PetApi {
       'edad': pet.age.toString(),
       'peso': pet.weight.toString(),
       'unidad_tiempo': pet.timeUnit.toString(),
-      'usuario': pet.userId
+      'usuario': pet.userId,
+      'mascotaImage': pet.imageUrl,
     };
 
     final response = await http.post(
@@ -99,6 +100,7 @@ class PetApi {
       'peso': pet.weight,
       'esterilizado': pet.isSterilized,
       'usuario': pet.userId,
+      'mascotaImage': pet.imageUrl
     };
 
     try {

@@ -1,11 +1,16 @@
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'widgets/raza_selector.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import '../../data/repositories/local_storage_service.dart';
+import '../../data/service/cloudinary_service.dart';
 import '../../domain/entities/pet.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../application/add_pet_use_case.dart';
 import '../../../main.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
 
 class PetFormScreen extends StatefulWidget {
   final bool isFirstTime;
@@ -20,12 +25,20 @@ class PetFormScreen extends StatefulWidget {
 }
 
 class _PetFormScreenState extends State<PetFormScreen> {
+
+  final CloudinaryService _cloudinaryService = CloudinaryService();
   final localStorageService = LocalStorageService();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   final _weightController = TextEditingController();
   bool _isLoading = false;
+
+  XFile? _image;
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
+  String? _downloadURL;
+
 
   String _selectedPetType = 'Perro';
   String? _selectedBreed;
@@ -45,9 +58,116 @@ class _PetFormScreenState extends State<PetFormScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85, // Puedes ajustar la calidad de la imagen
+    );
+
+    if (image != null) {
+      // Filtrar por formato válido
+      final validFormats = ['jpg', 'jpeg', 'png'];
+      final String fileExtension = path.extension(image.path).toLowerCase().replaceAll('.', '');
+
+      if (!validFormats.contains(fileExtension)) {
+        // Mostrar SnackBar si el formato no es válido
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Formato de imagen no válido. Seleccione una imagen JPG o PNG.',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.red, // Snack rojo para error
+          ),
+        );
+      } else {
+        // Si la imagen tiene un formato válido
+        setState(() {
+          _image = image;
+        });
+      }
+    }
+  }
+
+
+  Future _uploadImage() async {
+    if (_image == null) {
+      print("⚠️ No hay imagen seleccionada para subir.");
+      return false;
+    }
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final userId = await localStorageService.getCurrentUserId();
+      print("👤 ID de usuario obtenido: $userId");
+
+      final imageName = 'pet_${_nameController.text.trim()}_${userId}';
+      print("📤 Subiendo imagen con nombre: $imageName");
+
+      String? imageUrl = await _cloudinaryService.uploadImage(
+        File(_image!.path),
+        imageName,
+      );
+
+      print("📥 Respuesta de Cloudinary: $imageUrl");
+
+      if (imageUrl != null) {
+        setState(() {
+          _downloadURL = imageUrl;
+          _isUploading = false;
+        });
+
+        print("✅ Imagen subida exitosamente: $_downloadURL");
+        return true;
+      } else {
+        print("❌ Cloudinary devolvió null");
+        setState(() {
+          _isUploading = false;
+          _downloadURL = null;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error al subir la imagen'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+
+        return false;
+      }
+    } catch (e) {
+      setState(() {
+        _isUploading = false;
+        _downloadURL = null;
+      });
+
+      print('🔥 Excepción al subir imagen: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al subir la imagen: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+
+      return false;
+    }
+  }
+
+
   void _submitForm() async {
+    print("🟡 Iniciando _submitForm...");
+
     // Validar formulario y dropdowns
     bool isFormValid = _formKey.currentState!.validate();
+    print("📋 ¿Formulario válido?: $isFormValid");
 
     setState(() {
       _breedError = _selectedBreed == null ? 'Selecciona una raza' : null;
@@ -56,8 +176,10 @@ class _PetFormScreenState extends State<PetFormScreen> {
     });
 
     bool areDropdownsValid = _breedError == null && _sexError == null && _ageUnitError == null;
+    print("📋 ¿Dropdowns válidos?: $areDropdownsValid");
 
     if (!isFormValid || !areDropdownsValid) {
+      print("❌ Validación fallida. Cancelando...");
       _showError('Por favor completa todos los campos correctamente.');
       return;
     }
@@ -67,10 +189,29 @@ class _PetFormScreenState extends State<PetFormScreen> {
     });
 
     try {
+      String imageUrl = "";
+
+      // Si hay una imagen seleccionada, intenta subirla primero a Cloudinary
+      if (_image != null) {
+        print("📸 Imagen seleccionada. Subiendo...");
+        bool uploadSuccess = await _uploadImage();
+        print("📤 Resultado de subida: $uploadSuccess");
+
+        if (uploadSuccess && _downloadURL != null) {
+          imageUrl = _downloadURL!;
+          print("✅ URL de imagen obtenida: $imageUrl");
+        } else {
+          print("⚠️ La imagen no se subió correctamente o _downloadURL es null.");
+        }
+      } else {
+        print("📸 No hay imagen seleccionada. Se usará imageUrl vacío.");
+      }
+
       final userId = await localStorageService.getCurrentUserId();
+      print("👤 ID del usuario: $userId");
 
       final pet = Pet(
-        id: 0, // no se usa en la creación
+        id: 0,
         name: _nameController.text.trim(),
         type: _selectedPetType,
         breed: _selectedBreed!,
@@ -80,34 +221,48 @@ class _PetFormScreenState extends State<PetFormScreen> {
         weight: double.parse(_weightController.text.trim()),
         userId: userId,
         isSterilized: false,
+        imageUrl: imageUrl ?? '',
       );
+
+      print("📦 Pet listo para enviar:");
+      print(pet.toJson());
+      print("🔗 URL asignada al pet: ${pet.imageUrl}");
 
       final addPetUseCase = getIt<AddPetUseCase>();
       final petResponse = await addPetUseCase.addPet(pet);
 
       if (petResponse != null) {
+        print("✅ Pet registrado correctamente en el backend: ${petResponse.toJson()}");
+
         await localStorageService.insertPet(petResponse);
+        print("📥 Pet guardado en SQLite correctamente.");
+
         _showSuccess("Mascota registrada exitosamente");
 
         if (widget.isFirstTime) {
+          print("🧭 Navegando a pantalla principal.");
           Navigator.pushNamedAndRemoveUntil(
             context,
             AppRoutes.main,
                 (route) => false,
           );
         } else {
+          print("🔙 Navegando hacia atrás con la mascota creada.");
           Navigator.pop(context, petResponse);
         }
       } else {
+        print("❌ No se recibió respuesta del backend al registrar la mascota.");
         _showError('No se pudo registrar la mascota. Intenta nuevamente.');
       }
 
     } catch (e) {
+      print("🔥 Excepción durante el guardado: $e");
       _showError('Error al guardar la mascota: ${e.toString()}');
     } finally {
       setState(() {
         _isLoading = false;
       });
+      print("🔚 Finalizando _submitForm");
     }
   }
 
@@ -179,6 +334,43 @@ class _PetFormScreenState extends State<PetFormScreen> {
                     color: Colors.grey,
                   ),
                 ),
+
+                const SizedBox(height: 24),
+
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 55,
+                          backgroundColor: (_image == null && (_downloadURL == null || _downloadURL!.isEmpty))
+                              ? Colors.grey[200] // Fondo en escala de grises
+                              : const Color(0xffF0EFFE), // Fondo normal (por si acaso)
+                          backgroundImage: _image != null
+                              ? FileImage(File(_image!.path)) as ImageProvider
+                              : (_downloadURL != null && _downloadURL!.isNotEmpty
+                              ? NetworkImage(_downloadURL!)
+                              : null),
+                          child: (_image == null && (_downloadURL == null || _downloadURL!.isEmpty))
+                              ? Icon(
+                            Icons.camera_alt_outlined,
+                            size: 60,
+                            color: Colors.grey, // Ícono en escala de grises
+                          )
+                              : null,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Elegir foto',
+                          style: const TextStyle(color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
 
                 const SizedBox(height: 24),
 

@@ -239,6 +239,7 @@ class _PetHistoryState extends State<PetHistory> {
         gender: currentPet!.gender,
         timeUnit: currentPet!.timeUnit,
         userId: currentPet!.userId,
+        imageUrl: currentPet!.imageUrl
       );
     }
 

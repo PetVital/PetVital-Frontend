@@ -28,7 +28,7 @@ class LocalStorageService {
     // 🔥 Usamos una versión alta para forzar siempre onUpgrade
     return await openDatabase(
       dbPath,
-      version: 100, // Versión alta para forzar upgrade
+      version: 103, // Incrementamos la versión para forzar upgrade
       onCreate: (db, version) async {
         print("Creating database tables...");
         await _createAllTables(db);
@@ -70,7 +70,8 @@ class LocalStorageService {
         id TEXT PRIMARY KEY, 
         first_name TEXT,
         last_name TEXT,
-        email TEXT
+        email TEXT,
+        imageUrl TEXT
       )
     ''');
 
@@ -85,7 +86,8 @@ class LocalStorageService {
         timeUnit TEXT,
         weight REAL,
         userId INTEGER,
-        isSterilized INTEGER
+        isSterilized INTEGER,
+        imageUrl TEXT
       )
     ''');
 
@@ -151,7 +153,8 @@ class LocalStorageService {
           id TEXT PRIMARY KEY, 
           first_name TEXT,
           last_name TEXT,
-          email TEXT
+          email TEXT,
+          imageUrl TEXT
         )
       ''',
       'Pets': ''' 
@@ -165,7 +168,8 @@ class LocalStorageService {
           timeUnit TEXT,
           weight REAL,
           userId INTEGER,
-          isSterilized INTEGER
+          isSterilized INTEGER,
+          imageUrl TEXT
         )
       ''',
       'Messages': '''
@@ -221,7 +225,11 @@ class LocalStorageService {
     print("Checking for missing columns...");
 
     // 🔥 Verificar columnas en la tabla Pets
+    await _ensureColumnExists(db, 'User', 'imageUrl', "TEXT DEFAULT ''");
+
+    // 🔥 Verificar columnas en la tabla Pets
     await _ensureColumnExists(db, 'Pets', 'isSterilized', 'INTEGER DEFAULT 0');
+    await _ensureColumnExists(db, 'Pets', 'imageUrl', 'TEXT DEFAULT NULL'); // 🔥 AGREGADO
 
     // 🔥 Agregar aquí verificaciones para otras tablas si es necesario
     // await _ensureColumnExists(db, 'User', 'nueva_columna', 'TEXT DEFAULT NULL');
@@ -327,6 +335,7 @@ class LocalStorageService {
         'first_name': user.firstName,
         'last_name': user.lastName,
         'email': user.email,
+        'imageUrl': user.imageUrl,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -342,6 +351,7 @@ class LocalStorageService {
         firstName: results.first['first_name'] as String,
         lastName: results.first['last_name'] as String,
         email: results.first['email'] as String,
+        imageUrl: results.first['imageUrl'] as String? ?? '',
       );
     }
     return null;

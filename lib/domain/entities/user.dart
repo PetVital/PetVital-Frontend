@@ -3,12 +3,15 @@ class User {
   final String firstName;
   final String lastName;
   final String email;
+  final String imageUrl;
+
 
   User({
     required this.id,
     required this.firstName,
     required this.lastName,
     required this.email,
+    required this.imageUrl,
   });
 
   // Método para crear una instancia de User desde un JSON
@@ -18,6 +21,7 @@ class User {
       firstName: json['nombres'], // Mapea 'nombres' a 'firstName'
       lastName: json['apellidos'], // Mapea 'apellidos' a 'lastName'
       email: json['email'], // Mapea 'email' a 'email'
+      imageUrl: json['userImage'] ?? '',
     );
   }
 
@@ -28,6 +32,7 @@ class User {
       'nombres': firstName,
       'apellidos': lastName,
       'email': email,
+      'userImage': imageUrl,
     };
   }
 }

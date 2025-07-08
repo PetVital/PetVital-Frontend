@@ -10,22 +10,36 @@ class UserApi {
   final String baseUrl = ApiConstants.baseUrl;
 
   Future<LoginResponse?> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/login/'),
-      body: {
-        'email': email,
-        'contraseña': password,
-      },
-    );
+    print('🟡 Enviando solicitud de login a: $baseUrl/login/');
+    print('📤 Datos enviados: email=$email, contraseña=$password');
 
-    if (response.statusCode == 200) {
-      final data = json.decode(utf8.decode(response.bodyBytes));
-      print(data);
-      return LoginResponse.fromJson(data);
-    } else {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login/'),
+        body: {
+          'email': email,
+          'contraseña': password,
+        },
+      );
+
+      print('📥 Código de respuesta: ${response.statusCode}');
+      print('📥 Body crudo: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        print('✅ Login exitoso, datos recibidos: $data');
+        return LoginResponse.fromJson(data);
+      } else {
+        print('❌ Error en login. Status: ${response.statusCode}');
+        print('❌ Body: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('🔥 Excepción durante login: $e');
       return null;
     }
   }
+
 
   Future<bool> register(String nombre, String apellidos, String email, String password) async {
     final response = await http.post(
@@ -62,6 +76,7 @@ class UserApi {
         'email': user.email,
         'nombres': user.firstName,
         'apellidos': user.lastName,
+        'userImage': user.imageUrl,
       },
     );
 

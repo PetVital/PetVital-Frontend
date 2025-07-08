@@ -9,6 +9,7 @@ class Pet {
   final double weight;
   final int userId;
   final bool isSterilized;
+  final String imageUrl;
 
   Pet({
     required this.id,
@@ -21,6 +22,7 @@ class Pet {
     required this.weight,
     required this.userId,
     required this.isSterilized,
+    required this.imageUrl,
   });
 
   factory Pet.fromJson(Map<String, dynamic> json) => Pet(
@@ -34,6 +36,7 @@ class Pet {
     weight: double.parse(json['peso'].toString()),
     userId: json['usuario']['user_id'],
     isSterilized: json['esterilizado'] == true || json['esterilizado'] == 1,
+    imageUrl: json['mascotaImage'] ?? ''
   );
 
   Map<String, dynamic> toJson() => {
@@ -47,6 +50,7 @@ class Pet {
     'peso': weight,
     'usuario': userId,
     'esterilizado': isSterilized,
+    'mascotaImage': imageUrl
   };
 
   /// ✅ Desde SQLite: convertir de int a bool
@@ -61,6 +65,7 @@ class Pet {
     weight: (json['weight'] as num).toDouble(),
     userId: json['userId'],
     isSterilized: json['isSterilized'] == 1,
+    imageUrl: json['imageUrl'],
   );
 
   /// ✅ Para SQLite: convertir de bool a int
@@ -75,5 +80,6 @@ class Pet {
     'weight': weight,
     'userId': userId,
     'isSterilized': isSterilized ? 1 : 0,
+    'imageUrl': imageUrl,
   };
 }
