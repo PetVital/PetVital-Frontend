@@ -180,6 +180,13 @@ class _PetEditState extends State<PetEdit> {
       return;
     }
 
+    bool isNameRepeated = await localStorageService.isPetNameRepeated(_nameController.text.trim(), widget.pet.userId, widget.pet.id);
+
+    if (isNameRepeated) {
+      _showError('El nombre de la mascota ya está registrado. Por favor, ingresa un nombre único.');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -193,6 +200,10 @@ class _PetEditState extends State<PetEdit> {
         if (uploadSuccess && _downloadURL != null) {
           imageUrl = _downloadURL!;
         }
+      }
+      // Si se eliminó la imagen (downloadURL está vacío), actualizar a cadena vacía
+      else if (_downloadURL != null && _downloadURL!.isEmpty) {
+        imageUrl = '';
       }
 
       final updatedPet = Pet(
@@ -303,6 +314,13 @@ class _PetEditState extends State<PetEdit> {
     );
   }
 
+  void _removeImage() {
+    setState(() {
+      _image = null;
+      _downloadURL = '';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -373,6 +391,29 @@ class _PetEditState extends State<PetEdit> {
                               )
                                   : null,
                             ),
+
+                            // Mostrar botón de eliminar si hay una imagen
+                            if (_image != null || (_downloadURL != null && _downloadURL!.isNotEmpty))
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: _removeImage,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
                             if (_isUploading)
                               Positioned.fill(
                                 child: Container(
@@ -391,7 +432,9 @@ class _PetEditState extends State<PetEdit> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          _image != null ? 'Cambiar foto' : 'Elegir foto',
+                          (_image != null || (_downloadURL != null && _downloadURL!.isNotEmpty))
+                              ? 'Toca la imagen para cambiarla'
+                              : 'Elegir foto',
                           style: const TextStyle(color: Colors.black54),
                         ),
                       ],

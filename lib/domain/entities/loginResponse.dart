@@ -16,22 +16,18 @@ class LoginResponse {
     print('🔹 JSON completo recibido en LoginResponse: $json');
 
     final message = json['message'] ?? '';
-    print('🔹 Mensaje: $message');
 
     final userJson = json['user'];
     print('🔹 User JSON: $userJson');
 
     final petsJson = json['pets'] as List<dynamic>? ?? [];
-    print('🔹 Pets JSON: $petsJson');
 
     final user = User.fromJson(userJson);
     print('✅ Usuario creado: ${user.toJson()}');
 
     final pets = petsJson.map((petJson) {
-      print('➡ Procesando pet: $petJson');
       return Pet.fromJson(petJson);
     }).toList();
-    print('✅ Lista de mascotas creada: ${pets.map((p) => p.toJson()).toList()}');
 
     return LoginResponse(
       message: message,

@@ -79,27 +79,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 12),
-                    // Nombre
-                    Text(
-                      '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                    // Imagen de perfil si existe
+                    if (currentUser?.imageUrl != null && currentUser!.imageUrl!.isNotEmpty)
+                      Container(
+                        width: 45,
+                        height: 45,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(
+                            image: NetworkImage(currentUser!.imageUrl!),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    // Email
-                    Text(
-                      '${currentUser?.email ?? ''}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                    // Datos del usuario
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center, // centra verticalmente dentro del Row
+                      children: [
+                        Text(
+                          '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${currentUser?.email ?? ''}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

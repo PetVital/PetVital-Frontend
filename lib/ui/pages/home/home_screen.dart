@@ -17,6 +17,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'plan_screen.dart';
 import '../pets/pet_history.dart';
 import 'profile_screen.dart';
+import '../main/main_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../../data/api/common/api_constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -30,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? errorMessage;
   HomeResponse? homeData;
   User? currentUser;
+  final String baseUrl = ApiConstants.baseUrl;
 
   final LocalStorageService _storageService = LocalStorageService();
 

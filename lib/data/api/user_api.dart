@@ -11,7 +11,6 @@ class UserApi {
 
   Future<LoginResponse?> login(String email, String password) async {
     print('🟡 Enviando solicitud de login a: $baseUrl/login/');
-    print('📤 Datos enviados: email=$email, contraseña=$password');
 
     try {
       final response = await http.post(

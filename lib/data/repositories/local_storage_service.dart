@@ -401,6 +401,20 @@ class LocalStorageService {
     print("Todas las tablas han sido vaciadas.");
   }
 
+  Future<bool> isPetNameRepeated(String petName, int userId, int petId) async {
+    final db = await database;
+
+    final result = await db.query(
+      'Pets',
+      where: 'LOWER(name) = ? AND userId = ? AND id != ?',
+      whereArgs: [petName.toLowerCase(), userId, petId],
+      limit: 1,
+    );
+
+    return result.isNotEmpty;
+  }
+
+
   Future<void> clearPets() async {
     final db = await database;
     await db.delete('Pets');

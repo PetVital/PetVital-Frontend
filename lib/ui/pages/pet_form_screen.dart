@@ -184,6 +184,15 @@ class _PetFormScreenState extends State<PetFormScreen> {
       return;
     }
 
+    final userId = await localStorageService.getCurrentUserId();
+
+    bool isNameRepeated = await localStorageService.isPetNameRepeated(_nameController.text.trim(), userId, 0);
+
+    if (isNameRepeated) {
+      _showError('El nombre de la mascota ya está registrado. Por favor, ingresa un nombre único.');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -206,9 +215,6 @@ class _PetFormScreenState extends State<PetFormScreen> {
       } else {
         print("📸 No hay imagen seleccionada. Se usará imageUrl vacío.");
       }
-
-      final userId = await localStorageService.getCurrentUserId();
-      print("👤 ID del usuario: $userId");
 
       final pet = Pet(
         id: 0,
@@ -284,6 +290,13 @@ class _PetFormScreenState extends State<PetFormScreen> {
     );
   }
 
+  void _removeImage() {
+    setState(() {
+      _image = null;
+      _downloadURL = '';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -343,27 +356,58 @@ class _PetFormScreenState extends State<PetFormScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircleAvatar(
-                          radius: 55,
-                          backgroundColor: (_image == null && (_downloadURL == null || _downloadURL!.isEmpty))
-                              ? Colors.grey[200] // Fondo en escala de grises
-                              : const Color(0xffF0EFFE), // Fondo normal (por si acaso)
-                          backgroundImage: _image != null
-                              ? FileImage(File(_image!.path)) as ImageProvider
-                              : (_downloadURL != null && _downloadURL!.isNotEmpty
-                              ? NetworkImage(_downloadURL!)
-                              : null),
-                          child: (_image == null && (_downloadURL == null || _downloadURL!.isEmpty))
-                              ? Icon(
-                            Icons.camera_alt_outlined,
-                            size: 60,
-                            color: Colors.grey, // Ícono en escala de grises
-                          )
-                              : null,
+                        Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: _pickImage,
+                              child: CircleAvatar(
+                                radius: 55,
+                                backgroundColor: (_image == null && (_downloadURL == null || _downloadURL!.isEmpty))
+                                    ? Colors.grey[200] // Fondo en escala de grises
+                                    : const Color(0xffF0EFFE), // Fondo normal (por si acaso)
+                                backgroundImage: _image != null
+                                    ? FileImage(File(_image!.path)) as ImageProvider
+                                    : (_downloadURL != null && _downloadURL!.isNotEmpty
+                                    ? NetworkImage(_downloadURL!)
+                                    : null),
+                                child: (_image == null && (_downloadURL == null || _downloadURL!.isEmpty))
+                                    ? Icon(
+                                  Icons.camera_alt_outlined,
+                                  size: 60,
+                                  color: Colors.grey, // Ícono en escala de grises
+                                )
+                                    : null,
+                              ),
+                            ),
+
+                            // Mostrar botón de eliminar si hay una imagen
+                            if (_image != null || (_downloadURL != null && _downloadURL!.isNotEmpty))
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: _removeImage,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'Elegir foto',
+                          (_image != null || (_downloadURL != null && _downloadURL!.isNotEmpty))
+                              ? 'Toca la imagen para cambiarla'
+                              : 'Elegir foto',
                           style: const TextStyle(color: Colors.black54),
                         ),
                       ],
